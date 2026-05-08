@@ -29,6 +29,7 @@ export default function Transactions({
   const [editingId, setEditingId] = useState<string | null>(null);
   const months = Array.from(new Set(transactions.map(t => t.date.slice(0, 7)))).sort().reverse();
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Sync selectedMonth with most recent data if not set or if current selected has no data
   React.useEffect(() => {
@@ -112,34 +113,55 @@ export default function Transactions({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.description || !formData.amount) return;
+    setErrorMsg(null);
+    
+    const amountVal = parseFloat(formData.amount);
+    if (!formData.description) {
+      setErrorMsg("Deskripsi wajib diisi!");
+      return;
+    }
+    if (isNaN(amountVal) || amountVal <= 0) {
+      setErrorMsg("Jumlah uang harus di atas 0!");
+      return;
+    }
 
-    const activeItems = syncInventory ? selectedItems.filter(item => item.itemId && !isNaN(parseFloat(item.quantity))) : [];
+    // Determine active items only if sync is enabled
+    const activeItems = syncInventory 
+      ? selectedItems.filter(item => item.itemId && !isNaN(parseFloat(item.quantity)) && parseFloat(item.quantity) > 0) 
+      : [];
 
-    const transactionData: Transaction = {
+    const transactionData: any = {
       id: editingId || Math.random().toString(36).substr(2, 9),
-      ...formData,
-      amount: parseFloat(formData.amount),
-      items: activeItems.length > 0 ? activeItems.map(item => ({
-        itemId: item.itemId,
-        quantity: parseFloat(item.quantity),
-        price: parseFloat(item.price) || undefined
-      })) : undefined
+      description: formData.description,
+      amount: amountVal,
+      type: formData.type,
+      category: formData.category,
+      date: formData.date
     };
+
+    if (activeItems.length > 0) {
+      transactionData.items = activeItems.map(item => {
+        const itemObj: any = {
+          itemId: item.itemId,
+          quantity: parseFloat(item.quantity)
+        };
+        const p = parseFloat(item.price);
+        if (!isNaN(p)) itemObj.price = p;
+        return itemObj;
+      });
+    }
 
     if (editingId) {
       updateTransaction(transactionData);
     } else {
-      // Automatic sync to inventory for new transactions
       let relatedId: string | undefined = undefined;
       let relatedType: 'stockBatch' | 'stockOut' | undefined = undefined;
 
+      // Handle inventory sync if enabled and items are selected
       if (syncInventory && activeItems.length > 0) {
-        // For simplicity in linking, we currently only support linking the FIRST item in the list as the primary "related record"
-        // in terms of cascading delete. Or we could just link to the first one.
         const item = activeItems[0];
         const qty = parseFloat(item.quantity);
-        const itemPrice = parseFloat(item.price) || (parseFloat(formData.amount) / activeItems.length / qty);
+        const itemPrice = parseFloat(item.price) || (amountVal / activeItems.length / qty);
         
         if (formData.type === 'Expense') {
           const res = onAddStock({
@@ -149,7 +171,7 @@ export default function Transactions({
             date: formData.date
           });
           if (res) {
-            relatedId = res as any;
+            relatedId = res;
             relatedType = 'stockBatch';
           }
         } else {
@@ -159,33 +181,39 @@ export default function Transactions({
             date: formData.date
           });
           if (res) {
-            relatedId = res as any;
+            relatedId = res;
             relatedType = 'stockOut';
           } else {
-            // If stock removal failed (alert already shown in onRemoveStock), stop
+            // Insufficient stock alert already shown in onRemoveStock, abort submission
             return;
           }
         }
 
-        // Handle additional items if any (they won't be linked for cascading delete in this simple implementation)
+        // Handle additional items
         activeItems.slice(1).forEach(item => {
           const qty = parseFloat(item.quantity);
-          const itemPrice = parseFloat(item.price) || (parseFloat(formData.amount) / activeItems.length / qty);
+          const iPrice = parseFloat(item.price) || (amountVal / activeItems.length / qty);
           if (formData.type === 'Expense') {
-            onAddStock({ itemId: item.itemId, quantity: qty, price: itemPrice, date: formData.date });
+            onAddStock({ itemId: item.itemId, quantity: qty, price: iPrice, date: formData.date });
           } else {
             onRemoveStock({ itemId: item.itemId, quantity: qty, date: formData.date });
           }
         });
       }
 
-      addTransaction({
-        ...transactionData,
-        relatedId,
-        relatedType
-      });
+    // Finalize transaction addition
+      const finalTransaction = { ...transactionData };
+      if (relatedId) finalTransaction.relatedId = relatedId;
+      if (relatedType) finalTransaction.relatedType = relatedType;
+      
+      addTransaction(finalTransaction);
     }
 
+    // Ensure the list shows the month of the transaction just added/edited
+    const transactionMonth = formData.date.slice(0, 7);
+    setSelectedMonth(transactionMonth);
+
+    // Reset state
     setIsAdding(false);
     setEditingId(null);
     setSyncInventory(false);
@@ -304,7 +332,10 @@ export default function Transactions({
               <input 
                 type="text"
                 value={formData.description}
-                onChange={e => setFormData({...formData, description: e.target.value})}
+                onChange={e => {
+                  setFormData({...formData, description: e.target.value});
+                  if (errorMsg) setErrorMsg(null);
+                }}
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
                 placeholder="Contoh: Penjualan Produk A"
               />
@@ -314,7 +345,10 @@ export default function Transactions({
               <input 
                 type="number"
                 value={formData.amount}
-                onChange={e => setFormData({...formData, amount: e.target.value})}
+                onChange={e => {
+                  setFormData({...formData, amount: e.target.value});
+                  if (errorMsg) setErrorMsg(null);
+                }}
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
                 placeholder="0"
               />
@@ -359,8 +393,17 @@ export default function Transactions({
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
               />
             </div>
-            <div className="flex items-end">
-              <button type="submit" className="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-bold shadow-lg shadow-indigo-100">
+            <div className="flex flex-col gap-2">
+              {errorMsg && (
+                <div className="text-red-500 text-[10px] font-bold animate-pulse">
+                  {errorMsg}
+                </div>
+              )}
+              <button 
+                type="submit" 
+                id="btn-save-transaction"
+                className="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:transform active:scale-95 transition-all cursor-pointer"
+              >
                 {editingId ? 'Update Transaksi' : 'Simpan Transaksi'}
               </button>
             </div>
