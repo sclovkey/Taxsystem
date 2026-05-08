@@ -406,17 +406,29 @@ export default function Transactions({
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Jumlah (Rp)</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
+                {formData.category === 'Penjualan' ? 'Total Harga Jual' : 
+                 formData.category === 'Pembelian' ? 'Total Harga Beli' : 
+                 'Jumlah (Rp)'}
+              </label>
               <input 
                 type="number"
                 value={formData.amount}
+                readOnly={syncInventory && selectedItems.some(i => i.quantity && i.price)}
                 onChange={e => {
                   setFormData({...formData, amount: e.target.value});
                   if (errorMsg) setErrorMsg(null);
                 }}
-                className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
+                className={`w-full border border-slate-100 rounded-lg px-4 py-2 text-sm outline-none ${
+                  syncInventory && selectedItems.some(i => i.quantity && i.price)
+                  ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
+                  : 'bg-slate-50 focus:ring-2 focus:ring-indigo-500/10'
+                }`}
                 placeholder="0"
               />
+              {syncInventory && selectedItems.some(i => i.quantity && i.price) && (
+                <p className="text-[9px] text-brand-blue mt-1 font-medium">* Terhitung otomatis dari rincian barang.</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tipe</label>
@@ -622,7 +634,9 @@ export default function Transactions({
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1">Harga Satuan (Rp)</label>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">
+                          {formData.type === 'Income' ? 'Harga Jual Satuan (Rp)' : 'Harga Beli Satuan (Rp)'}
+                        </label>
                         <input 
                           type="number"
                           value={selected.price}
