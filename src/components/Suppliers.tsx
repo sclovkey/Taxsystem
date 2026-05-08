@@ -169,7 +169,7 @@ export default function Suppliers({ suppliers, addSupplier, deleteSupplier }: Su
                 </div>
                 <button 
                   onClick={() => deleteSupplier(s.id)}
-                  className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                  className="p-2 text-slate-300 hover:text-brand-yellow hover:bg-brand-blue rounded-lg transition-all opacity-40 group-hover:opacity-100"
                   title="Hapus Supplier"
                 >
                   <Trash2 size={16} />

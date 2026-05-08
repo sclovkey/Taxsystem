@@ -174,8 +174,10 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                   e.stopPropagation();
                   deleteInventoryItem(item.id);
                 }}
-                className={`p-1.5 ml-1 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 ${
-                  selectedItemId === item.id ? 'text-white/60 hover:bg-white/20 hover:text-white' : 'text-slate-300'
+                className={`p-1.5 ml-1 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
+                  selectedItemId === item.id 
+                    ? 'text-brand-yellow hover:bg-white/10' 
+                    : 'text-slate-300 hover:bg-brand-yellow/10 hover:text-brand-yellow-dark'
                 }`}
                 title="Hapus Barang"
               >
@@ -203,13 +205,13 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
 
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           <div className="px-6 py-4 border-b border-slate-50 font-bold flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-800"><List className="w-4 h-4 text-indigo-500" /> Histori Stok: {currentItem?.name}</div>
+            <div className="flex items-center gap-2 text-slate-800"><List className="w-4 h-4 text-brand-blue" /> Histori Stok: {currentItem?.name}</div>
             <span className="text-xs font-medium text-slate-400 italic">FIFO Tracking</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">Harga</th><th className="px-6 py-4 text-right">Total</th><th className="px-6 py-4 text-center">Aksi</th></tr>
+                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">Harga</th><th className="px-6 py-4 text-right text-brand-blue">Total</th><th className="px-6 py-4 text-center">Aksi</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {stockCard.map((entry) => (
@@ -227,13 +229,13 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                           e.stopPropagation();
                           deleteStockEntry(entry.id, entry.type as 'IN' | 'OUT');
                         }}
-                        className="p-2 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
+                        className="p-2 text-brand-yellow-dark hover:text-brand-yellow hover:bg-brand-blue rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
                         title="Hapus Catatan"
                       >
                         <Trash2 size={16} />
                       </button>
                     </td>
-                  </tr>
+                </tr>
                 ))}
               </tbody>
             </table>
