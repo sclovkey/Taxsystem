@@ -70,11 +70,19 @@ export default function Transactions({
     calculateTotalFromItems(newItems);
   };
 
-  const calculateTotalFromItems = (itemsList: { quantity: string; price: string }[]) => {
+  const calculateTotalFromItems = (itemsList: { itemId: string; quantity: string; price: string }[]) => {
     const total = itemsList.reduce((acc, curr) => {
       const q = parseFloat(curr.quantity) || 0;
-      const p = parseFloat(curr.price) || 0;
-      return acc + (q * p);
+      if (formData.type === 'Income') {
+        const item = items.find(i => i.id === curr.itemId);
+        // Use Selling Price from inventory for the top amount (Total Harga Jual)
+        const sPrice = item?.sellingPrice || 0;
+        return acc + (q * sPrice);
+      } else {
+        // Use purchase price for expense calculation
+        const p = parseFloat(curr.price) || 0;
+        return acc + (q * p);
+      }
     }, 0);
     if (total > 0) {
       setFormData(prev => ({ ...prev, amount: total.toString() }));
@@ -92,12 +100,7 @@ export default function Transactions({
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     if (type === 'Income') {
-      // Prioritize selling price if defined
-      if (item.sellingPrice) {
-        return item.sellingPrice.toString();
-      }
-
-      // FIFO Calculation for Sales (fallback to cost price if no selling price)
+      // ALWAYS return HPP (Cost) for Sales details to track cost basis
       let remaining = quantity;
       let totalCost = 0;
       let covered = 0;
@@ -407,9 +410,11 @@ export default function Transactions({
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-                {formData.category === 'Penjualan' ? 'Total Harga Jual' : 
-                 formData.category === 'Pembelian' ? 'Total Harga Beli' : 
-                 'Jumlah (Rp)'}
+                {formData.category === 'Penjualan' 
+                  ? (selectedItems.length === 1 && selectedItems[0].itemId && items.find(i => i.id === selectedItems[0].itemId)?.sellingPrice
+                      ? `Total Penjualan (@ Rp ${items.find(i => i.id === selectedItems[0].itemId)!.sellingPrice!.toLocaleString('id-ID')} / ${items.find(i => i.id === selectedItems[0].itemId)!.unit})`
+                      : 'Total Harga Jual (Terhitung Otomatis)')
+                  : formData.category === 'Pembelian' ? 'Total Harga Beli' : 'Jumlah (Rp)'}
               </label>
               <input 
                 type="number"
@@ -635,14 +640,17 @@ export default function Transactions({
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-[10px] font-bold text-slate-400 mb-1">
-                          {formData.type === 'Income' ? 'Harga Jual Satuan (Rp)' : 'Harga Beli Satuan (Rp)'}
+                          {formData.type === 'Income' ? 'Harga Beli (HPP Otomatis)' : 'Harga Beli Satuan (Rp)'}
                         </label>
                         <input 
                           type="number"
                           value={selected.price}
+                          readOnly={formData.type === 'Income'}
                           onChange={e => updateItemRow(index, 'price', e.target.value)}
-                          className="w-full bg-white border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
-                          placeholder="0"
+                          className={`w-full border border-slate-100 rounded-lg px-4 py-2 text-sm outline-none ${
+                            formData.type === 'Income' ? 'bg-slate-100 text-slate-400 font-medium' : 'bg-white focus:ring-2 focus:ring-indigo-500/10'
+                          }`}
+                          placeholder={formData.type === 'Income' ? 'Terhitung FIFO' : '0'}
                         />
                       </div>
                       <div className="md:col-span-1 flex justify-end">
@@ -698,7 +706,7 @@ export default function Transactions({
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   <span className="text-xs font-semibold text-indigo-600">{item.quantity}x</span>
                                   {item.price && (
-                                    <span className="text-[10px] text-slate-400">@ Rp {item.price.toLocaleString('id-ID')}</span>
+                                    <span className="text-[10px] text-slate-400">@ {t.type === 'Income' ? 'HPP' : 'Rp'} {item.price.toLocaleString('id-ID')}</span>
                                   )}
                                 </div>
                               </div>

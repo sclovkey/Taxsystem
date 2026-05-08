@@ -58,6 +58,17 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
       targetId = newItem.id;
     } else {
       if (!targetId) return;
+      // Update existing item's selling price if provided in this form
+      const item = items.find(i => i.id === targetId);
+      if (item) {
+        const sPrice = newItemForm.sellingPrice ? parseFloat(newItemForm.sellingPrice) : undefined;
+        if (sPrice !== item.sellingPrice) {
+          updateInventoryItem({
+            ...item,
+            sellingPrice: sPrice
+          });
+        }
+      }
     }
 
     // Record stock
@@ -80,11 +91,13 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
     e.preventDefault();
     if (!editItemForm.name || !editItemForm.unit) return;
 
+    const sPrice = editItemForm.sellingPrice ? parseFloat(editItemForm.sellingPrice) : undefined;
+
     updateInventoryItem({
       id: editItemForm.id,
       name: editItemForm.name,
       unit: editItemForm.unit,
-      sellingPrice: editItemForm.sellingPrice ? parseFloat(editItemForm.sellingPrice) : undefined
+      sellingPrice: sPrice
     });
 
     setIsEditingItem(false);
@@ -133,11 +146,14 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
     });
 
     // Also update item's selling price if provided (Global update)
-    if (editingStockData.sellingPrice && currentItem) {
-      updateInventoryItem({
-        ...currentItem,
-        sellingPrice: parseFloat(editingStockData.sellingPrice)
-      });
+    if (currentItem) {
+      const sPrice = editingStockData.sellingPrice ? parseFloat(editingStockData.sellingPrice) : undefined;
+      if (sPrice !== currentItem.sellingPrice) {
+        updateInventoryItem({
+          ...currentItem,
+          sellingPrice: sPrice
+        });
+      }
     }
 
     setIsEditingStock(false);
@@ -164,7 +180,9 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
     }),
     ...itemStockOuts.map(s => {
       const linkedT = transactions.find(t => t.relatedId === s.id && t.relatedType === 'stockOut');
-      const sPrice = linkedT ? linkedT.amount / s.quantity : 0;
+      const item = items.find(i => i.id === s.itemId);
+      // For Sales, display the actual selling price from the transaction if available, otherwise fallback to item's default selling price
+      const sPrice = linkedT ? linkedT.amount / s.quantity : (item?.sellingPrice || 0);
       return { 
         date: s.date, 
         type: 'OUT', 
@@ -279,15 +297,15 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Harga Jual (Rp)</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Harga Jual Satuan (Rp)</label>
                   <input 
                     type="number" 
-                    placeholder="Contoh: 100000" 
+                    placeholder="Contoh: 120000" 
                     value={newItemForm.sellingPrice} 
                     onChange={e => setNewItemForm({...newItemForm, sellingPrice: e.target.value})} 
                     className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">* Digunakan sebagai harga default saat penjualan.</p>
+                  <p className="text-[10px] text-slate-400 mt-1">* Digunakan sebagai harga jual default.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -303,7 +321,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-right">Harga Satuan (Rp)</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-right">Harga Beli Satuan (HPP)</label>
                     <input 
                       type="number" 
                       placeholder="0" 
@@ -337,7 +355,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                   <X size={20} />
                 </button>
               </div>
-              <form onSubmit={handleEditItem} className="space-y-4">
+              <form onSubmit={handleEditItem} className="space-y-4 text-left">
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nama Barang</label>
                   <input 
@@ -361,7 +379,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-left">Harga Jual (Rp)</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-left">Harga Jual Satuan (Rp)</label>
                   <input 
                     type="number" 
                     placeholder="Harga Jual" 
@@ -417,7 +435,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-                      {editingStockData.type === 'IN' ? 'Harga Beli (HPP)' : 'Harga Jual Satuan'}
+                      {editingStockData.type === 'IN' ? 'Harga Beli Satuan (HPP)' : 'Harga Jual Satuan'}
                     </label>
                     <input 
                       type="number" 
@@ -430,10 +448,10 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                 </div>
                 {editingStockData.type === 'IN' && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Default Harga Jual (Rp)</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Default Harga Jual Satuan (Rp)</label>
                     <input 
                       type="number" 
-                      placeholder="Contoh: 100000" 
+                      placeholder="Contoh: 120000" 
                       value={editingStockData.sellingPrice} 
                       onChange={e => setEditingStockData({...editingStockData, sellingPrice: e.target.value})} 
                       className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
@@ -507,9 +525,27 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
             <div className="p-3 bg-brand-blue/5 text-brand-blue w-fit rounded-full mx-auto mb-4 italic font-black">STK</div>
             <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Stok Tersedia</p>
             <h3 className="text-4xl font-bold text-slate-800 tracking-tight">{totalStock} <span className="text-base font-normal text-slate-400">{currentItem?.unit}</span></h3>
-            <div className="mt-6 pt-6 border-t border-slate-50 flex justify-between text-left">
-              <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Nilai Stok</p><p className="font-bold text-sm text-slate-700">Rp {inventoryValue.toLocaleString('id-ID')}</p></div>
-              <div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">HPP Satuan</p><p className="font-bold text-sm text-slate-700">Rp {totalStock > 0 ? (inventoryValue / totalStock).toLocaleString('id-ID') : 0}</p></div>
+            <div className="mt-6 pt-6 border-t border-slate-50 grid grid-cols-2 gap-y-4 text-left">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">HPP Satuan</p>
+                <p className="font-bold text-sm text-slate-700">Rp {totalStock > 0 ? (inventoryValue / totalStock).toLocaleString('id-ID') : 0}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Harga Jual Satuan</p>
+                <p className="font-bold text-sm text-brand-blue flex items-center justify-end gap-1">
+                  Rp {(currentItem?.sellingPrice || 0).toLocaleString('id-ID')}
+                  <button 
+                    onClick={() => startEditing(currentItem!)}
+                    className="p-1 hover:bg-brand-blue/5 rounded text-slate-300 hover:text-brand-blue transition-colors"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                </p>
+              </div>
+              <div className="col-span-2 pt-2 border-t border-slate-50">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Total Nilai Stok</p>
+                <p className="font-bold text-xl text-brand-blue">Rp {inventoryValue.toLocaleString('id-ID')}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -522,7 +558,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">HPP</th><th className="px-6 py-4 text-right">Harga Jual</th><th className="px-6 py-4 text-right text-brand-blue">Total HPP</th><th className="px-6 py-4 text-center">Aksi</th></tr>
+                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">HPP (Beli)</th><th className="px-6 py-4 text-right">Harga Jual Satuan</th><th className="px-6 py-4 text-right">Total HPP</th><th className="px-6 py-4 text-right text-brand-blue">Total Jual</th><th className="px-6 py-4 text-center">Aksi</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {stockCard.map((entry) => (
@@ -533,6 +569,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.price.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.sellingPrice.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-right font-bold text-sm text-slate-900">Rp {entry.total.toLocaleString('id-ID')}</td>
+                    <td className="px-6 py-4 text-right font-bold text-sm text-brand-blue">Rp {(entry.qty * entry.sellingPrice).toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button 
