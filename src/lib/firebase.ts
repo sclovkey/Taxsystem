@@ -1,5 +1,11 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -9,6 +15,13 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+
+export const loginWithEmail = (username: string, pass: string) => {
+  // Map simple username to a virtual email for Firebase Compatibility
+  const email = username.includes('@') ? username : `${username}@finance.umkm`;
+  return signInWithEmailAndPassword(auth, email, pass);
+};
+
 export const logout = () => signOut(auth);
 
 async function testConnection() {
