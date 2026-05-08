@@ -119,7 +119,7 @@ export default function App() {
         // If it's a purchase, check if any of it was consumed
         const batch = stockBatches.find(b => b.id === t.relatedId);
         if (batch && batch.remainingQuantity < batch.quantity) {
-          if (!confirm("Sebagian stok ini sudah terjual/keluar. Menghapus transaksi ini akan menyebabkan ketidaksesuaian stok. Lanjutkan?")) {
+          if (typeof window !== 'undefined' && !window.confirm("Sebagian stok ini sudah terjual/keluar. Menghapus transaksi ini akan menyebabkan ketidaksesuaian stok. Lanjutkan?")) {
             return;
           }
         }
@@ -156,6 +156,57 @@ export default function App() {
   const addSupplier = (s: Supplier) => upsert('suppliers', s.id, s);
   const addEquityRecord = (r: EquityRecord) => upsert('equityRecords', r.id, r);
   const addInventoryItem = (item: InventoryItem) => upsert('inventoryItems', item.id, item);
+  const deleteInventoryItem = (id: string) => {
+    const hasData = stockBatches.some(b => b.itemId === id) || stockOuts.some(so => so.itemId === id);
+    if (hasData) {
+      if (typeof window !== 'undefined' && !window.confirm("Barang ini memiliki riwayat stok atau transaksi. Menghapus barang akan menghapus semua data terkait. Lanjutkan?")) {
+        return;
+      }
+      // Clean up related data
+      stockBatches.filter(b => b.itemId === id).forEach(b => remove('stockBatches', b.id));
+      stockOuts.filter(so => so.itemId === id).forEach(so => remove('stockOuts', so.id));
+    }
+    remove('inventoryItems', id);
+  };
+
+  const deleteStockEntry = (id: string, type: 'IN' | 'OUT') => {
+    if (typeof window !== 'undefined' && !window.confirm("Hapus catatan histori stok ini? Transaksi keuangan yang terkait juga akan dihapus.")) return;
+
+    if (type === 'IN') {
+      const batch = stockBatches.find(b => b.id === id);
+      if (batch && batch.remainingQuantity < batch.quantity) {
+        if (typeof window !== 'undefined' && !window.confirm("Sebagian stok ini sudah digunakan/terjual. Menghapus ini akan membuat stok minus atau tidak valid. Lanjutkan?")) return;
+      }
+      // Find and delete linked transaction
+      const linkedRecord = transactions.find(t => t.relatedId === id && t.relatedType === 'stockBatch');
+      if (linkedRecord) remove('transactions', linkedRecord.id);
+      remove('stockBatches', id);
+    } else {
+      const sOut = stockOuts.find(so => so.id === id);
+      if (sOut) {
+        // Restore stock logic (inverse FIFO)
+        let toRestore = sOut.quantity;
+        const targetBatches = [...stockBatches]
+          .filter(b => b.itemId === sOut.itemId)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        for (const batch of targetBatches) {
+          if (toRestore <= 0) break;
+          const canAdd = batch.quantity - batch.remainingQuantity;
+          const toAdd = Math.min(canAdd, toRestore);
+          if (toAdd > 0) {
+            batch.remainingQuantity += toAdd;
+            toRestore -= toAdd;
+            upsert('stockBatches', batch.id, batch);
+          }
+        }
+        // Find and delete linked transaction
+        const linkedRecord = transactions.find(t => t.relatedId === id && t.relatedType === 'stockOut');
+        if (linkedRecord) remove('transactions', linkedRecord.id);
+        remove('stockOuts', id);
+      }
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -180,6 +231,8 @@ export default function App() {
           onAddStock={onAddStock} 
           onRemoveStock={onRemoveStock} 
           addInventoryItem={addInventoryItem}
+          deleteInventoryItem={deleteInventoryItem}
+          deleteStockEntry={deleteStockEntry}
         />;
       case 'assets':
         return <Assets assets={assets} addAsset={addAsset} />;

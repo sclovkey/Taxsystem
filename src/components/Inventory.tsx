@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Inbox, List, Plus, X } from 'lucide-react';
+import { Inbox, List, Plus, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { InventoryItem, StockBatch, StockOut } from '../types';
 
@@ -10,18 +10,24 @@ interface InventoryProps {
   onAddStock: (data: { itemId: string; quantity: number; price: number; date: string }) => string | null;
   onRemoveStock: (data: { itemId: string; quantity: number; date: string }) => string | null;
   addInventoryItem: (item: InventoryItem) => void;
+  deleteInventoryItem: (id: string) => void;
+  deleteStockEntry: (id: string, type: 'IN' | 'OUT') => void;
 }
 
-export default function Inventory({ items, batches, stockOuts, onAddStock, onRemoveStock, addInventoryItem }: InventoryProps) {
+export default function Inventory({ items, batches, stockOuts, onAddStock, onRemoveStock, addInventoryItem, deleteInventoryItem, deleteStockEntry }: InventoryProps) {
   const [selectedItemId, setSelectedItemId] = useState<string>(items[0]?.id || '');
   const [isAddingItem, setIsAddingItem] = useState(false);
 
-  // Update selectedItemId if it's empty but items are available
+  // Sync selectedItemId with items list (handle deletions or empty state)
   React.useEffect(() => {
-    if (!selectedItemId && items.length > 0) {
+    const itemExists = items.find(i => i.id === selectedItemId);
+    if (!itemExists && items.length > 0) {
       setSelectedItemId(items[0].id);
+    } else if (items.length === 0) {
+      setSelectedItemId('');
     }
   }, [items, selectedItemId]);
+
   const [newItemForm, setNewItemForm] = useState({ name: '', unit: '', quantity: '', price: '' });
   const [formData, setFormData] = useState({ quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
 
@@ -150,17 +156,29 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
         )}
       </AnimatePresence>
 
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {items.map(item => (
-          <button key={item.id} onClick={() => setSelectedItemId(item.id)} className={`px-4 py-2 rounded-xl border shrink-0 transition-all ${selectedItemId === item.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'}`}>
-            <span className="text-sm font-bold">{item.name}</span>
-          </button>
-        ))}
-      </div>
+        <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 overflow-x-auto scrollbar-hide gap-1">
+          {items.map(item => (
+            <div key={item.id} className="relative flex-shrink-0">
+              <button 
+                onClick={() => setSelectedItemId(item.id)} 
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+                  selectedItemId === item.id 
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-white'
+                }`}
+              >
+                {item.name}
+              </button>
+            </div>
+          ))}
+          {items.length === 0 && (
+            <p className="px-6 py-2.5 text-sm text-slate-400 italic">Belum ada barang di daftar persediaan.</p>
+          )}
+        </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-6">
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center shadow-sm">
+          <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center shadow-sm relative">
             <div className="p-3 bg-indigo-50 text-indigo-600 w-fit rounded-full mx-auto mb-4 italic font-black">STK</div>
             <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Stok Tersedia</p>
             <h3 className="text-4xl font-bold text-slate-800 tracking-tight">{totalStock} <span className="text-base font-normal text-slate-400">{currentItem?.unit}</span></h3>
@@ -179,16 +197,30 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">Harga</th><th className="px-6 py-4 text-right">Total</th></tr>
+                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">Harga</th><th className="px-6 py-4 text-right">Total</th><th className="px-6 py-4 text-center">Aksi</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {stockCard.map((entry, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                {stockCard.map((entry) => (
+                  <tr key={`${entry.id}-${entry.type}`} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 text-sm text-slate-500">{entry.date}</td>
                     <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${entry.type === 'IN' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{entry.type === 'IN' ? 'Masuk' : 'Keluar'}</span></td>
                     <td className="px-6 py-4 text-right text-sm font-medium">{entry.qty}</td>
                     <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.price.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-right font-bold text-sm text-slate-900">Rp {entry.total.toLocaleString('id-ID')}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          deleteStockEntry(entry.id, entry.type as 'IN' | 'OUT');
+                        }}
+                        className="p-2 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
+                        title="Hapus Catatan"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
