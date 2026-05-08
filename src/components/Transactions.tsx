@@ -28,11 +28,18 @@ export default function Transactions({
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const months = Array.from(new Set(transactions.map(t => t.date.slice(0, 7)))).sort().reverse();
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    // Default to the first available month if it exists, otherwise current month
-    const latestDataMonth = Array.from(new Set(transactions.map(t => t.date.slice(0, 7)))).sort().reverse()[0];
-    return latestDataMonth || new Date().toISOString().slice(0, 7);
-  });
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+
+  // Sync selectedMonth with most recent data if not set or if current selected has no data
+  React.useEffect(() => {
+    if (transactions.length > 0) {
+      const availableMonths = Array.from(new Set(transactions.map(t => t.date.slice(0, 7)))).sort().reverse();
+      // If selected month has no data and there is data elsewhere, switch to latest data month
+      if (!transactions.some(t => t.date.startsWith(selectedMonth)) && availableMonths.length > 0) {
+        setSelectedMonth(availableMonths[0]);
+      }
+    }
+  }, [transactions, selectedMonth]);
   const [formData, setFormData] = useState({
     description: '',
     amount: '',

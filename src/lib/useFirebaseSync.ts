@@ -42,17 +42,42 @@ export function useFirebaseSync(user: User | null) {
     const userId = user.uid;
     const unsubscritbers: (() => void)[] = [];
 
+    let loadedCounts = 0;
+    const TOTAL_COLLECTIONS = 8;
+    const checkLoaded = () => {
+      loadedCounts++;
+      if (loadedCounts >= TOTAL_COLLECTIONS) {
+        setLoading(false);
+      }
+    };
+
     const syncCollection = (name: string, setter: (data: any[]) => void, orderField: string = 'date') => {
       const path = `users/${userId}/${name}`;
-      const q = query(collection(db, path)); // orderBy might fail if index not created, keep it simple first
       const unsub = onSnapshot(collection(db, path), (snapshot) => {
         const data = snapshot.docs.map(doc => doc.data() as any);
-        // Sort in memory first to avoid index requirements
-        if (orderField === 'date') {
-          data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }
+        
+        // Sort in memory to avoid index requirements
+        data.sort((a, b) => {
+          const valA = a[orderField];
+          const valB = b[orderField];
+          
+          if (orderField === 'date' || orderField.toLowerCase().includes('date') || orderField === 'updatedAt') {
+            return new Date(valB).getTime() - new Date(valA).getTime();
+          }
+          
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            return valA.localeCompare(valB);
+          }
+          
+          return 0;
+        });
+
         setter(data);
-      }, (error) => handleFirestoreError(error, OperationType.LIST, path));
+        if (loading) checkLoaded();
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+        if (loading) checkLoaded();
+      });
       unsubscritbers.push(unsub);
     };
 
@@ -64,8 +89,6 @@ export function useFirebaseSync(user: User | null) {
     syncCollection('suppliers', setSuppliers, 'name');
     syncCollection('liabilities', setLiabilities);
     syncCollection('equityRecords', setEquityRecords);
-
-    setLoading(false);
 
     return () => unsubscritbers.forEach(unsub => unsub());
   }, [user]);

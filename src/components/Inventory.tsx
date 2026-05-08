@@ -15,6 +15,13 @@ interface InventoryProps {
 export default function Inventory({ items, batches, stockOuts, onAddStock, onRemoveStock, addInventoryItem }: InventoryProps) {
   const [selectedItemId, setSelectedItemId] = useState<string>(items[0]?.id || '');
   const [isAddingItem, setIsAddingItem] = useState(false);
+
+  // Update selectedItemId if it's empty but items are available
+  React.useEffect(() => {
+    if (!selectedItemId && items.length > 0) {
+      setSelectedItemId(items[0].id);
+    }
+  }, [items, selectedItemId]);
   const [newItemForm, setNewItemForm] = useState({ name: '', unit: '', quantity: '', price: '' });
   const [formData, setFormData] = useState({ quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
 
