@@ -6,10 +6,11 @@ import { Liability, Supplier } from '../types';
 interface LiabilitiesProps {
   liabilities: Liability[];
   suppliers: Supplier[];
-  setLiabilities: React.Dispatch<React.SetStateAction<Liability[]>>;
+  addLiability: (l: Liability) => void;
+  updateLiability: (l: Liability) => void;
 }
 
-export default function Liabilities({ liabilities, suppliers, setLiabilities }: LiabilitiesProps) {
+export default function Liabilities({ liabilities, suppliers, addLiability, updateLiability }: LiabilitiesProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
     supplierId: '',
@@ -26,9 +27,10 @@ export default function Liabilities({ liabilities, suppliers, setLiabilities }: 
     .reduce((acc, l) => acc + l.amount, 0);
 
   const toggleStatus = (id: string) => {
-    setLiabilities(prev => prev.map(l => 
-      l.id === id ? { ...l, status: l.status === 'Paid' ? 'Pending' : 'Paid' } : l
-    ));
+    const l = liabilities.find(item => item.id === id);
+    if (l) {
+      updateLiability({ ...l, status: l.status === 'Paid' ? 'Pending' : 'Paid' });
+    }
   };
 
   const handleAddDebt = (e: React.FormEvent) => {
@@ -45,7 +47,7 @@ export default function Liabilities({ liabilities, suppliers, setLiabilities }: 
       status: 'Pending'
     };
 
-    setLiabilities(prev => [newLiability, ...prev]);
+    addLiability(newLiability);
     setIsAdding(false);
     setFormData({
       supplierId: '',

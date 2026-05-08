@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['id', 'date', 'description', 'amount', 'type', 'category', 'userId']) &&
+             data.id is string && data.id.size() < 128 &&
+             data.date is string && data.date.size() < 128 &&
+             data.description is string && data.description.size() < 1000 &&
+             data.amount is number &&
+             data.type in ['Income', 'Expense'] &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidInventoryItem(data) {
+      return data.keys().hasAll(['id', 'name', 'unit', 'userId']) &&
+             data.id is string && data.name is string && data.unit is string &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidStockBatch(data) {
+      return data.keys().hasAll(['id', 'itemId', 'date', 'quantity', 'remainingQuantity', 'pricePerUnit', 'userId']) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidStockOut(data) {
+      return data.keys().hasAll(['id', 'itemId', 'date', 'quantity', 'cogs', 'userId']) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidAsset(data) {
+      return data.keys().hasAll(['id', 'name', 'purchaseDate', 'cost', 'usefulLifePoints', 'salvageValue', 'userId']) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidSupplier(data) {
+      return data.keys().hasAll(['id', 'name', 'contact', 'category', 'userId']) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidLiability(data) {
+      return data.keys().hasAll(['id', 'supplierId', 'date', 'dueDate', 'description', 'amount', 'status', 'userId']) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidEquityRecord(data) {
+      return data.keys().hasAll(['id', 'date', 'description', 'amount', 'type', 'userId']) &&
+             data.userId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      match /transactions/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTransaction(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidTransaction(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['date', 'description', 'amount', 'type', 'category', 'items'])
+        );
+        allow delete: if isOwner(userId);
+      }
+      match /inventoryItems/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidInventoryItem(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidInventoryItem(incoming()) && (
+           incoming().diff(existing()).affectedKeys().hasOnly(['name', 'unit'])
+        );
+        allow delete: if isOwner(userId);
+      }
+      match /stockBatches/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidStockBatch(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && (
+           incoming().diff(existing()).affectedKeys().hasOnly(['remainingQuantity'])
+        );
+        allow delete: if isOwner(userId);
+      }
+      match /stockOuts/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidStockOut(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidStockOut(incoming());
+        allow delete: if isOwner(userId);
+      }
+      match /assets/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidAsset(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidAsset(incoming());
+        allow delete: if isOwner(userId);
+      }
+      match /suppliers/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidSupplier(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidSupplier(incoming());
+        allow delete: if isOwner(userId);
+      }
+      match /liabilities/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidLiability(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidLiability(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'amount', 'description', 'dueDate'])
+        );
+        allow delete: if isOwner(userId);
+      }
+      match /equityRecords/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidEquityRecord(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidEquityRecord(incoming());
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

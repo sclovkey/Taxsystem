@@ -11,9 +11,11 @@ import {
   Truck, 
   Wallet,
   ClipboardList,
-  FileText
+  FileText,
+  LogOut
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { logout } from '../lib/firebase';
 
 interface SidebarProps {
   activeTab: string;
@@ -77,10 +79,17 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }: 
         ))}
       </nav>
 
-      <div className="mt-auto pt-4 border-t border-slate-100">
+      <div className="mt-auto flex flex-col gap-1 pt-4 border-t border-slate-100">
         <button className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors text-sm font-medium">
           <Settings className="w-4 h-4 text-slate-400" />
           Pengaturan
+        </button>
+        <button 
+          onClick={() => logout()}
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium"
+        >
+          <LogOut className="w-4 h-4 text-red-400" />
+          Keluar
         </button>
       </div>
       </div>

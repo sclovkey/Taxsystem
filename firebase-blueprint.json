@@ -1,0 +1,153 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["Income", "Expense"] },
+        "category": { "type": "string" },
+        "items": { "type": "array" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "date", "description", "amount", "type", "category", "userId"]
+    },
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "Item in inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "unit": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "name", "unit", "userId"]
+    },
+    "StockBatch": {
+      "title": "Stock Batch",
+      "description": "Batch of stock received",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "itemId": { "type": "string" },
+        "date": { "type": "string" },
+        "quantity": { "type": "number" },
+        "remainingQuantity": { "type": "number" },
+        "pricePerUnit": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "itemId", "date", "quantity", "remainingQuantity", "pricePerUnit", "userId"]
+    },
+    "StockOut": {
+      "title": "Stock Out",
+      "description": "Stock removed from inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "itemId": { "type": "string" },
+        "date": { "type": "string" },
+        "quantity": { "type": "number" },
+        "cogs": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "itemId", "date", "quantity", "cogs", "userId"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "description": "Fixed asset record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "purchaseDate": { "type": "string" },
+        "cost": { "type": "number" },
+        "usefulLifePoints": { "type": "number" },
+        "salvageValue": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "name", "purchaseDate", "cost", "usefulLifePoints", "salvageValue", "userId"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Supplier contact information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "contact": { "type": "string" },
+        "category": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "name", "contact", "category", "userId"]
+    },
+    "Liability": {
+      "title": "Liability",
+      "description": "Liability or debt record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "date": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "Paid", "Overdue"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "supplierId", "date", "dueDate", "description", "amount", "status", "userId"]
+    },
+    "EquityRecord": {
+      "title": "Equity Record",
+      "description": "Equity change record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["Initial", "Addition", "Withdrawal", "ProfitDist"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "date", "description", "amount", "type", "userId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User transactions"
+    },
+    "users/{userId}/inventoryItems/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "User inventory items"
+    },
+    "users/{userId}/stockBatches/{batchId}": {
+      "schema": "StockBatch",
+      "description": "User stock batches"
+    },
+    "users/{userId}/stockOuts/{stockOutId}": {
+      "schema": "StockOut",
+      "description": "User stock outs"
+    },
+    "users/{userId}/assets/{assetId}": {
+      "schema": "Asset",
+      "description": "User assets"
+    },
+    "users/{userId}/suppliers/{supplierId}": {
+      "schema": "Supplier",
+      "description": "User suppliers"
+    },
+    "users/{userId}/liabilities/{liabilityId}": {
+      "schema": "Liability",
+      "description": "User liabilities"
+    },
+    "users/{userId}/equityRecords/{recordId}": {
+      "schema": "EquityRecord",
+      "description": "User equity records"
+    }
+  }
+}
