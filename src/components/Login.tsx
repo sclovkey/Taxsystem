@@ -1,27 +1,14 @@
 import React, { useState } from 'react';
-import { loginWithGoogle, loginWithEmail } from '../lib/firebase';
-import { LogIn, Landmark, AlertCircle, Loader2, User, Lock, Chrome } from 'lucide-react';
+import { loginWithEmail } from '../lib/firebase';
+import { LogIn, Landmark, AlertCircle, Loader2, User, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'traditional' | 'google'>('traditional');
   
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-
-  const handleGoogleLogin = async () => {
-    setError(null);
-    setIsLoggingIn(true);
-    try {
-      await loginWithGoogle();
-    } catch (err: any) {
-      handleError(err);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
 
   const handleTraditionalLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,11 +30,7 @@ export default function Login() {
 
   const handleError = (err: any) => {
     console.error("Login failed:", err);
-    if (err.code === 'auth/popup-closed-by-user') {
-      setError('Jendela login ditutup sebelum selesai.');
-    } else if (err.code === 'auth/unauthorized-domain') {
-      setError('Domain belum terdaftar di Firebase Console.');
-    } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
       setError('Username atau password salah.');
     } else if (err.code === 'auth/operation-not-allowed') {
       setError('Metode login Email/Password belum diaktifkan di Firebase Console.');
@@ -74,28 +57,6 @@ export default function Login() {
         </div>
 
         <div className="p-8">
-          {/* Tabs */}
-          <div className="flex bg-slate-100 p-1 rounded-xl mb-8">
-            <button
-              onClick={() => setLoginMethod('traditional')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg transition-all ${
-                loginMethod === 'traditional' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <User size={16} />
-              Username
-            </button>
-            <button
-              onClick={() => setLoginMethod('google')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg transition-all ${
-                loginMethod === 'google' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <Chrome size={16} />
-              Google
-            </button>
-          </div>
-
           <AnimatePresence mode="wait">
             {error && (
               <motion.div 
@@ -109,70 +70,48 @@ export default function Login() {
             )}
           </AnimatePresence>
 
-          {loginMethod === 'traditional' ? (
-            <form onSubmit={handleTraditionalLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Username</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-3.5 text-slate-400" size={18} />
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Contoh: admin1"
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
-                  />
-                </div>
+          <form onSubmit={handleTraditionalLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Username</label>
+              <div className="relative">
+                <User className="absolute left-4 top-3.5 text-slate-400" size={18} />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Contoh: admin1"
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
+                />
               </div>
-              <div className="pb-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-3.5 text-slate-400" size={18} />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={isLoggingIn}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-[0.98] disabled:opacity-70"
-              >
-                {isLoggingIn ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  <>
-                    <LogIn size={20} />
-                    Masuk Sekarang
-                  </>
-                )}
-              </button>
-            </form>
-          ) : (
-            <div className="space-y-4 pt-4">
-              <p className="text-center text-slate-500 text-sm mb-6">Gunakan akun Google Anda untuk akses cepat tanpa password.</p>
-              <button
-                onClick={handleGoogleLogin}
-                disabled={isLoggingIn}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all active:scale-[0.98] disabled:opacity-70"
-              >
-                {isLoggingIn ? (
-                  <Loader2 className="animate-spin text-indigo-600" size={20} />
-                ) : (
-                  <>
-                    <div className="w-5 h-5 flex items-center justify-center bg-red-500 rounded-full text-white">
-                      <Chrome size={12} />
-                    </div>
-                    Masuk dengan Google
-                  </>
-                )}
-              </button>
             </div>
-          )}
+            <div className="pb-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 text-slate-400" size={18} />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-[0.98] disabled:opacity-70"
+            >
+              {isLoggingIn ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <>
+                  <LogIn size={20} />
+                  Masuk Sekarang
+                </>
+              )}
+            </button>
+          </form>
 
           <div className="mt-8 pt-6 border-t border-slate-100">
              <p className="text-center text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
