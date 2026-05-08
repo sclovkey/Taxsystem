@@ -179,6 +179,71 @@ export default function App() {
     }
     remove('inventoryItems', id);
   };
+  
+  const updateStockEntry = (id: string, type: 'IN' | 'OUT', data: { quantity: number; price: number; date: string }) => {
+    if (type === 'IN') {
+      const batch = stockBatches.find(b => b.id === id);
+      if (!batch) return;
+      
+      const diff = data.quantity - batch.quantity;
+      const newRemaining = batch.remainingQuantity + diff;
+      
+      if (newRemaining < 0) {
+        alert("Gagal merubah kuantitas: Stok sudah terjual melebihi kuantitas baru.");
+        return;
+      }
+
+      const updatedBatch: StockBatch = {
+        ...batch,
+        quantity: data.quantity,
+        remainingQuantity: newRemaining,
+        pricePerUnit: data.price,
+        date: data.date
+      };
+      
+      upsert('stockBatches', id, updatedBatch);
+      
+      // Update linked transaction
+      const linkedT = transactions.find(t => t.relatedId === id && t.relatedType === 'stockBatch');
+      if (linkedT) {
+        upsert('transactions', linkedT.id, {
+          ...linkedT,
+          amount: data.quantity * data.price,
+          date: data.date
+        });
+      }
+    } else {
+      // OUT is harder because of COGS. For simplicity, we just block major qty changes or recalculate.
+      // But updating date/price (profit) of a Sale is common.
+      const sOut = stockOuts.find(so => so.id === id);
+      if (!sOut) return;
+
+      if (data.quantity !== sOut.quantity) {
+        alert("Merubah kuantitas penjualan lewat inventory belum didukung. Silakan hapus dan input ulang lewat transaksi.");
+        return;
+      }
+
+      const updatedOut: StockOut = {
+        ...sOut,
+        date: data.date
+      };
+      // Note: price for StockOut in this context is usually the Sale Price if it comes from a transaction.
+      // But StockOut itself only stores COGS.
+      
+      upsert('stockOuts', id, updatedOut);
+
+      // Update linked transaction
+      const linkedT = transactions.find(t => t.relatedId === id && t.relatedType === 'stockOut');
+      if (linkedT) {
+        // If it's a sale, 'data.price' here would be the Sale Price
+        upsert('transactions', linkedT.id, {
+          ...linkedT,
+          amount: data.quantity * data.price,
+          date: data.date
+        });
+      }
+    }
+  };
 
   const deleteStockEntry = (id: string, type: 'IN' | 'OUT') => {
     if (typeof window !== 'undefined' && !window.confirm("Hapus catatan histori stok ini? Transaksi keuangan yang terkait juga akan dihapus.")) return;
@@ -240,12 +305,14 @@ export default function App() {
           items={inventoryItems} 
           batches={stockBatches} 
           stockOuts={stockOuts} 
+          transactions={transactions}
           onAddStock={onAddStock} 
           onRemoveStock={onRemoveStock} 
           addInventoryItem={addInventoryItem}
           updateInventoryItem={updateInventoryItem}
           deleteInventoryItem={deleteInventoryItem}
           deleteStockEntry={deleteStockEntry}
+          updateStockEntry={updateStockEntry}
         />;
       case 'assets':
         return <Assets assets={assets} addAsset={addAsset} />;

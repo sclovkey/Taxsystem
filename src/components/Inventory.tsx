@@ -1,24 +1,28 @@
 import React, { useState } from 'react';
 import { Inbox, List, Plus, X, Trash2, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { InventoryItem, StockBatch, StockOut } from '../types';
+import { Transaction, InventoryItem, StockBatch, StockOut } from '../types';
 
 interface InventoryProps {
   items: InventoryItem[];
   batches: StockBatch[];
   stockOuts: StockOut[];
+  transactions: Transaction[];
   onAddStock: (data: { itemId: string; quantity: number; price: number; date: string }) => string | null;
   onRemoveStock: (data: { itemId: string; quantity: number; date: string }) => string | null;
   addInventoryItem: (item: InventoryItem) => void;
   updateInventoryItem: (item: InventoryItem) => void;
   deleteInventoryItem: (id: string) => void;
   deleteStockEntry: (id: string, type: 'IN' | 'OUT') => void;
+  updateStockEntry: (id: string, type: 'IN' | 'OUT', data: { quantity: number; price: number; date: string }) => void;
 }
 
-export default function Inventory({ items, batches, stockOuts, onAddStock, onRemoveStock, addInventoryItem, updateInventoryItem, deleteInventoryItem, deleteStockEntry }: InventoryProps) {
+export default function Inventory({ items, batches, stockOuts, transactions, onAddStock, onRemoveStock, addInventoryItem, updateInventoryItem, deleteInventoryItem, deleteStockEntry, updateStockEntry }: InventoryProps) {
   const [selectedItemId, setSelectedItemId] = useState<string>(items[0]?.id || '');
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [isEditingItem, setIsEditingItem] = useState(false);
+  const [isEditingStock, setIsEditingStock] = useState(false);
+  const [editingStockData, setEditingStockData] = useState<{ id: string; type: 'IN' | 'OUT'; quantity: string; price: string; sellingPrice: string; date: string } | null>(null);
 
   // Sync selectedItemId with items list (handle deletions or empty state)
   React.useEffect(() => {
@@ -96,6 +100,50 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
     setIsEditingItem(true);
   };
 
+  const startEditingStock = (entry: any) => {
+    const item = items.find(i => i.id === selectedItemId);
+    
+    let displayPrice = entry.price;
+    if (entry.type === 'OUT') {
+      const linkedT = transactions.find(t => t.relatedId === entry.id && t.relatedType === 'stockOut');
+      if (linkedT) {
+        displayPrice = linkedT.amount / entry.qty;
+      }
+    }
+
+    setEditingStockData({
+      id: entry.id,
+      type: entry.type as 'IN' | 'OUT',
+      quantity: entry.qty.toString(),
+      price: displayPrice.toString(),
+      sellingPrice: item?.sellingPrice?.toString() || '',
+      date: entry.date
+    });
+    setIsEditingStock(true);
+  };
+
+  const handleUpdateStock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStockData) return;
+
+    updateStockEntry(editingStockData.id, editingStockData.type, {
+      quantity: parseFloat(editingStockData.quantity),
+      price: parseFloat(editingStockData.price),
+      date: editingStockData.date
+    });
+
+    // Also update item's selling price if provided (Global update)
+    if (editingStockData.sellingPrice && currentItem) {
+      updateInventoryItem({
+        ...currentItem,
+        sellingPrice: parseFloat(editingStockData.sellingPrice)
+      });
+    }
+
+    setIsEditingStock(false);
+    setEditingStockData(null);
+  };
+
   const itemBatches = batches.filter(b => b.itemId === selectedItemId);
   const itemStockOuts = stockOuts.filter(s => s.itemId === selectedItemId);
 
@@ -103,8 +151,30 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
   const inventoryValue = itemBatches.reduce((acc, b) => acc + (b.remainingQuantity * b.pricePerUnit), 0);
 
   const stockCard = [
-    ...itemBatches.map(b => ({ date: b.date, type: 'IN', qty: b.quantity, price: b.pricePerUnit, total: b.quantity * b.pricePerUnit, id: b.id })),
-    ...itemStockOuts.map(s => ({ date: s.date, type: 'OUT', qty: s.quantity, price: s.cogs / s.quantity, total: s.cogs, id: s.id }))
+    ...itemBatches.map(b => {
+      return { 
+        date: b.date, 
+        type: 'IN', 
+        qty: b.quantity, 
+        price: b.pricePerUnit, 
+        sellingPrice: currentItem?.sellingPrice || 0,
+        total: b.quantity * b.pricePerUnit, 
+        id: b.id 
+      };
+    }),
+    ...itemStockOuts.map(s => {
+      const linkedT = transactions.find(t => t.relatedId === s.id && t.relatedType === 'stockOut');
+      const sPrice = linkedT ? linkedT.amount / s.quantity : 0;
+      return { 
+        date: s.date, 
+        type: 'OUT', 
+        qty: s.quantity, 
+        price: s.cogs / s.quantity, 
+        sellingPrice: sPrice,
+        total: s.cogs, 
+        id: s.id 
+      };
+    })
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
@@ -308,6 +378,77 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
             </motion.div>
           </div>
         )}
+
+        {isEditingStock && editingStockData && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-left">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-slate-800">Edit Catatan Stok {editingStockData.type === 'IN' ? 'Masuk' : 'Keluar'}</h3>
+                <button onClick={() => setIsEditingStock(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleUpdateStock} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tanggal</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={editingStockData.date} 
+                    onChange={e => setEditingStockData({...editingStockData, date: e.target.value})} 
+                    className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Jumlah</label>
+                    <input 
+                      type="number" 
+                      required
+                      value={editingStockData.quantity} 
+                      onChange={e => setEditingStockData({...editingStockData, quantity: e.target.value})} 
+                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
+                      {editingStockData.type === 'IN' ? 'Harga Beli (HPP)' : 'Harga Jual Satuan'}
+                    </label>
+                    <input 
+                      type="number" 
+                      required
+                      value={editingStockData.price} 
+                      onChange={e => setEditingStockData({...editingStockData, price: e.target.value})} 
+                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                    />
+                  </div>
+                </div>
+                {editingStockData.type === 'IN' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Default Harga Jual (Rp)</label>
+                    <input 
+                      type="number" 
+                      placeholder="Contoh: 100000" 
+                      value={editingStockData.sellingPrice} 
+                      onChange={e => setEditingStockData({...editingStockData, sellingPrice: e.target.value})} 
+                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">* Memperbarui harga jual default untuk produk ini.</p>
+                  </div>
+                )}
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setIsEditingStock(false)} className="flex-1 font-bold text-slate-400">Batal</button>
+                  <button type="submit" className="flex-1 py-3 bg-brand-blue text-white rounded-xl font-bold shadow-lg shadow-brand-blue/10">Simpan Perubahan</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
         <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 overflow-x-auto scrollbar-hide gap-1">
@@ -381,7 +522,7 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">Harga</th><th className="px-6 py-4 text-right text-brand-blue">Total</th><th className="px-6 py-4 text-center">Aksi</th></tr>
+                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">HPP</th><th className="px-6 py-4 text-right">Harga Jual</th><th className="px-6 py-4 text-right text-brand-blue">Total HPP</th><th className="px-6 py-4 text-center">Aksi</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {stockCard.map((entry) => (
@@ -390,20 +531,35 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                     <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${entry.type === 'IN' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{entry.type === 'IN' ? 'Masuk' : 'Keluar'}</span></td>
                     <td className="px-6 py-4 text-right text-sm font-medium">{entry.qty}</td>
                     <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.price.toLocaleString('id-ID')}</td>
+                    <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.sellingPrice.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-right font-bold text-sm text-slate-900">Rp {entry.total.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-center">
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          deleteStockEntry(entry.id, entry.type as 'IN' | 'OUT');
-                        }}
-                        className="p-2 text-brand-yellow-dark hover:text-brand-yellow hover:bg-brand-blue rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
-                        title="Hapus Catatan"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            startEditingStock(entry);
+                          }}
+                          className="p-2 text-slate-400 hover:text-brand-blue hover:bg-brand-blue/5 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
+                          title="Edit Catatan"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            deleteStockEntry(entry.id, entry.type as 'IN' | 'OUT');
+                          }}
+                          className="p-2 text-brand-yellow-dark hover:text-brand-yellow hover:bg-brand-blue rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
+                          title="Hapus Catatan"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                 </tr>
                 ))}
