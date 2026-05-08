@@ -158,7 +158,7 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
 
         <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 overflow-x-auto scrollbar-hide gap-1">
           {items.map(item => (
-            <div key={item.id} className="relative flex-shrink-0">
+            <div key={item.id} className="relative flex-shrink-0 group flex items-center">
               <button 
                 onClick={() => setSelectedItemId(item.id)} 
                 className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
@@ -168,6 +168,18 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                 }`}
               >
                 {item.name}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteInventoryItem(item.id);
+                }}
+                className={`p-1.5 ml-1 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 ${
+                  selectedItemId === item.id ? 'text-white/60 hover:bg-white/20 hover:text-white' : 'text-slate-300'
+                }`}
+                title="Hapus Barang"
+              >
+                <Trash2 size={14} />
               </button>
             </div>
           ))}

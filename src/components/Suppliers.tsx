@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Truck, Phone, Tag, Plus, X, Search } from 'lucide-react';
+import { Truck, Phone, Tag, Plus, X, Search, Trash2 } from 'lucide-react';
 import { Supplier } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SuppliersProps {
   suppliers: Supplier[];
   addSupplier: (s: Supplier) => void;
+  deleteSupplier: (id: string) => void;
 }
 
-export default function Suppliers({ suppliers, addSupplier }: SuppliersProps) {
+export default function Suppliers({ suppliers, addSupplier, deleteSupplier }: SuppliersProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
@@ -166,6 +167,13 @@ export default function Suppliers({ suppliers, addSupplier }: SuppliersProps) {
                 <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:scale-110 transition-transform">
                   <Truck size={20} />
                 </div>
+                <button 
+                  onClick={() => deleteSupplier(s.id)}
+                  className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                  title="Hapus Supplier"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-1">{s.name}</h3>
               <div className="space-y-2 mt-4">

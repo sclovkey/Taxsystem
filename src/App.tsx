@@ -155,6 +155,10 @@ export default function App() {
   
   const addAsset = (a: Asset) => upsert('assets', a.id, a);
   const addSupplier = (s: Supplier) => upsert('suppliers', s.id, s);
+  const deleteSupplier = (id: string) => {
+    if (typeof window !== 'undefined' && !window.confirm("Hapus data supplier ini?")) return;
+    remove('suppliers', id);
+  };
   const addCustomer = (c: Customer) => upsert('customers', c.id, c);
   const addEquityRecord = (r: EquityRecord) => upsert('equityRecords', r.id, r);
   const addInventoryItem = (item: InventoryItem) => upsert('inventoryItems', item.id, item);
@@ -247,7 +251,7 @@ export default function App() {
           addCustomer={addCustomer}
         />;
       case 'suppliers':
-        return <Suppliers suppliers={suppliers} addSupplier={addSupplier} />;
+        return <Suppliers suppliers={suppliers} addSupplier={addSupplier} deleteSupplier={deleteSupplier} />;
       case 'reports':
         return <Reports transactions={transactions} />;
       case 'balance-sheet':
