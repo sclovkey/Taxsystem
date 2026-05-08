@@ -13,18 +13,23 @@ export default function Reports({ transactions }: ReportsProps) {
   });
 
   const filteredTransactions = transactions.filter(t => t.date.startsWith(selectedMonth));
-  const incomeTransactions = filteredTransactions.filter(t => t.type === 'Income');
-  const expenseTransactions = filteredTransactions.filter(t => t.type === 'Expense');
-
+  
+  // Income (Revenue)
+  const incomeTransactions = filteredTransactions.filter(t => t.type === 'Income' || t.category === 'Penjualan');
   const incomeTotal = incomeTransactions.reduce((acc, t) => acc + t.amount, 0);
-  const hppTransactions = expenseTransactions.filter(t => t.category === 'Supplies');
+
+  // HPP (Cost of Goods Sold) - usually 'Pembelian' in this context
+  const hppTransactions = filteredTransactions.filter(t => t.category === 'Pembelian');
   const hppTotal = hppTransactions.reduce((acc, t) => acc + t.amount, 0);
-  const otherExpenses = expenseTransactions.filter(t => t.category !== 'Supplies');
+
+  // Operating Expenses
+  const otherExpenses = filteredTransactions.filter(t => t.category === 'Beban');
   const otherExpensesTotal = otherExpenses.reduce((acc, t) => acc + t.amount, 0);
+
   const grossProfit = incomeTotal - hppTotal;
   const netProfit = incomeTotal - hppTotal - otherExpensesTotal;
 
-  // Group by category
+  // Group by category for display
   const getCategoryTotal = (trans: Transaction[]) => {
     const cats = Array.from(new Set(trans.map(t => t.category)));
     return cats.map(cat => ({
@@ -68,7 +73,7 @@ export default function Reports({ transactions }: ReportsProps) {
             <div className="space-y-1">
               {incomeCategories.map((cat, i) => (
                 <div key={i} className="flex justify-between items-center py-3 px-1 border-b border-slate-50">
-                  <span className="text-slate-700 font-medium">{cat.name === 'Sales' ? 'Penjualan' : cat.name}</span>
+                  <span className="text-slate-700 font-medium">{cat.name}</span>
                   <span className="text-slate-900 font-bold">Rp {cat.total.toLocaleString('id-ID')}</span>
                 </div>
               ))}
@@ -84,7 +89,7 @@ export default function Reports({ transactions }: ReportsProps) {
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Harga Pokok Penjualan (HPP)</h2>
             <div className="space-y-1">
               <div className="flex justify-between items-center py-2 px-1 text-sm text-slate-700 font-medium">
-                <span>Total Pembelian Bahan Baku</span>
+                <span>Total Pembelian (HPP)</span>
                 <span className="font-bold">Rp {hppTotal.toLocaleString('id-ID')}</span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-slate-200 mt-2 text-indigo-700">
@@ -103,13 +108,7 @@ export default function Reports({ transactions }: ReportsProps) {
               ) : (
                 expenseCategories.map((cat, i) => (
                   <div key={i} className="flex justify-between items-center py-3 px-1 border-b border-slate-50">
-                    <span className="text-slate-700 font-medium">{
-                      cat.name === 'Staff' ? 'Beban Gaji Karyawan' :
-                      cat.name === 'Utilities' ? 'Beban Listrik, Air & Wifi' :
-                      cat.name === 'Marketing' ? 'Beban Pemasaran' :
-                      cat.name === 'Maintenance' ? 'Beban Pemeliharaan' :
-                      cat.name === 'Rent' ? 'Beban Sewa' : cat.name
-                    }</span>
+                    <span className="text-slate-700 font-medium">{cat.name}</span>
                     <span className="text-slate-900 font-bold">Rp {cat.total.toLocaleString('id-ID')}</span>
                   </div>
                 ))

@@ -8,9 +8,19 @@ interface DashboardProps {
 }
 
 export default function Workspace({ transactions, setActiveTab }: DashboardProps) {
-  const income = transactions.filter(t => t.type === 'Income').reduce((acc, t) => acc + t.amount, 0);
-  const expenses = transactions.filter(t => t.type === 'Expense').reduce((acc, t) => acc + t.amount, 0);
-  const profit = income - expenses;
+  const income = transactions
+    .filter(t => t.type === 'Income' || t.category === 'Penjualan')
+    .reduce((acc, t) => acc + t.amount, 0);
+    
+  const hpp = transactions
+    .filter(t => t.category === 'Pembelian')
+    .reduce((acc, t) => acc + t.amount, 0);
+    
+  const operatingExpenses = transactions
+    .filter(t => t.category === 'Beban')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const profit = income - hpp - operatingExpenses;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

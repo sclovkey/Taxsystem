@@ -22,7 +22,11 @@ export default function BalanceSheet({ transactions, assets, equityRecords, liab
     return Math.min(asset.cost - asset.salvageValue, annualDepreciation * yearsOwned);
   };
 
-  const totalCostAssets = assets.reduce((acc, a) => acc + a.cost, 0);
+  const assetTransactionsTotal = transactions
+    .filter(t => t.category === 'Aset')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const totalCostAssets = assets.reduce((acc, a) => acc + a.cost, 0) + assetTransactionsTotal;
   const totalAccumulatedDepreciation = assets.reduce((acc, a) => acc + calculateDepreciationAccumulated(a), 0);
   const netFixedAssets = totalCostAssets - totalAccumulatedDepreciation;
   

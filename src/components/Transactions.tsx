@@ -45,7 +45,7 @@ export default function Transactions({
     description: '',
     amount: '',
     type: 'Expense' as const,
-    category: 'Operational',
+    category: 'Beban',
     date: new Date().toISOString().split('T')[0]
   });
 
@@ -223,7 +223,7 @@ export default function Transactions({
       description: '',
       amount: '',
       type: 'Expense',
-      category: 'Operational',
+      category: 'Beban',
       date: new Date().toISOString().split('T')[0]
     });
   };
@@ -291,7 +291,7 @@ export default function Transactions({
                 description: '',
                 amount: '',
                 type: 'Expense',
-                category: 'Operational',
+                category: 'Beban',
                 date: new Date().toISOString().split('T')[0]
               });
             } else {
@@ -376,13 +376,16 @@ export default function Transactions({
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Kategori</label>
-              <input 
-                type="text"
+              <select 
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
-                placeholder="e.g. Operasional"
-              />
+              >
+                <option value="Penjualan">Penjualan</option>
+                <option value="Pembelian">Pembelian</option>
+                <option value="Beban">Beban</option>
+                <option value="Aset">Aset</option>
+              </select>
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tanggal</label>
