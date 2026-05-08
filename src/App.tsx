@@ -161,6 +161,10 @@ export default function App() {
   };
   const addCustomer = (c: Customer) => upsert('customers', c.id, c);
   const addEquityRecord = (r: EquityRecord) => upsert('equityRecords', r.id, r);
+  const deleteEquityRecord = (id: string) => {
+    if (typeof window !== 'undefined' && !window.confirm("Hapus catatan perubahan modal ini?")) return;
+    remove('equityRecords', id);
+  };
   const addInventoryItem = (item: InventoryItem) => upsert('inventoryItems', item.id, item);
   const deleteInventoryItem = (id: string) => {
     const hasData = stockBatches.some(b => b.itemId === id) || stockOuts.some(so => so.itemId === id);
@@ -262,7 +266,12 @@ export default function App() {
           liabilities={liabilities}
         />;
       case 'equity':
-        return <EquityReport equityRecords={equityRecords} addEquityRecord={addEquityRecord} currentProfit={currentProfit} />;
+        return <EquityReport 
+          equityRecords={equityRecords} 
+          addEquityRecord={addEquityRecord} 
+          deleteEquityRecord={deleteEquityRecord}
+          currentProfit={currentProfit} 
+        />;
       case 'tax':
         return <TaxReport transactions={transactions} />;
       default:
