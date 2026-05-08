@@ -227,6 +227,7 @@ export default function App() {
         return <Transactions 
           transactions={transactions} 
           items={inventoryItems}
+          batches={stockBatches}
           addTransaction={addTransaction} 
           updateTransaction={updateTransaction}
           deleteTransaction={deleteTransaction}

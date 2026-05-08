@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Plus, Search, Filter, ArrowUpRight, ArrowDownLeft, Calendar, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Package, Truck, MinusCircle, PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import { Transaction, InventoryItem } from '../types';
+import { Transaction, InventoryItem, StockBatch } from '../types';
 
 interface TransactionsProps {
   transactions: Transaction[];
   items: InventoryItem[];
+  batches: StockBatch[];
   addTransaction: (t: Transaction) => void;
   updateTransaction: (t: Transaction) => void;
   deleteTransaction: (id: string) => void;
@@ -18,6 +19,7 @@ interface TransactionsProps {
 export default function Transactions({ 
   transactions, 
   items, 
+  batches,
   addTransaction, 
   updateTransaction, 
   deleteTransaction, 
@@ -79,6 +81,43 @@ export default function Transactions({
     }
   };
 
+  const calculateSuggestedPrice = (itemId: string, quantity: number, type: 'Income' | 'Expense') => {
+    if (!itemId || quantity <= 0) return '';
+
+    const itemBatches = batches
+      .filter(b => b.itemId === itemId)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (type === 'Income') {
+      // FIFO Calculation for Sales (suggesting cost price)
+      let remaining = quantity;
+      let totalCost = 0;
+      let covered = 0;
+
+      for (const batch of itemBatches) {
+        if (remaining <= 0) break;
+        if (batch.remainingQuantity <= 0) continue;
+
+        const take = Math.min(batch.remainingQuantity, remaining);
+        totalCost += take * batch.pricePerUnit;
+        remaining -= take;
+        covered += take;
+      }
+
+      if (covered > 0) {
+        return (totalCost / covered).toString();
+      }
+    } else {
+      // Latest Purchase Price for Purchases
+      const latestBatch = [...itemBatches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+      if (latestBatch) {
+        return latestBatch.pricePerUnit.toString();
+      }
+    }
+
+    return '';
+  };
+
   const generateDescription = (itemsList: typeof selectedItems, type: string) => {
     const activeItems = itemsList.filter(i => i.itemId && i.quantity);
     if (activeItems.length === 0) return '';
@@ -94,7 +133,24 @@ export default function Transactions({
 
   const updateItemRow = (index: number, field: 'itemId' | 'quantity' | 'price', value: string) => {
     const newItems = [...selectedItems];
-    newItems[index] = { ...newItems[index], [field]: value };
+    let updatedPrice = newItems[index].price;
+    
+    // Auto-calculate suggested price when item or quantity changes
+    if (field === 'itemId' || field === 'quantity') {
+      const itemId = field === 'itemId' ? value : newItems[index].itemId;
+      const quantity = field === 'quantity' ? parseFloat(value) : parseFloat(newItems[index].quantity);
+      
+      const suggested = calculateSuggestedPrice(itemId, quantity, formData.type);
+      if (suggested) {
+        updatedPrice = suggested;
+      }
+    }
+
+    newItems[index] = { 
+      ...newItems[index], 
+      [field]: value,
+      price: field === 'price' ? value : updatedPrice 
+    };
     setSelectedItems(newItems);
     
     // Auto-update description if not manually edited or if it was previously auto-generated
@@ -378,13 +434,32 @@ export default function Transactions({
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Kategori</label>
               <select 
                 value={formData.category}
-                onChange={e => setFormData({...formData, category: e.target.value})}
-                className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
+                onChange={e => {
+                  const val = e.target.value;
+                  const isSyncable = val === 'Penjualan' || val === 'Pembelian';
+                  
+                  // Auto-set type based on category
+                  let targetType = formData.type;
+                  if (val === 'Penjualan') targetType = 'Income';
+                  if (val === 'Pembelian') targetType = 'Expense';
+
+                  setFormData({
+                    ...formData, 
+                    category: val,
+                    type: targetType
+                  });
+                  
+                  if (isSyncable) {
+                    setSyncInventory(true);
+                  }
+                }}
+                className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-brand-blue/10 outline-none"
               >
-                <option value="Penjualan">Penjualan</option>
-                <option value="Pembelian">Pembelian</option>
-                <option value="Beban">Beban</option>
-                <option value="Aset">Aset</option>
+                <option value="Beban">Beban Operasional</option>
+                <option value="Penjualan">Penjualan (Dagang)</option>
+                <option value="Pembelian">Pembelian (Stok)</option>
+                <option value="Aset">Aset Tetap</option>
+                <option value="Lainnya">Lain-lain</option>
               </select>
             </div>
             <div className="md:col-span-2">

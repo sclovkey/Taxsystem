@@ -30,7 +30,7 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
     }
   }, [items, selectedItemId]);
 
-  const [newItemForm, setNewItemForm] = useState({ id: '', name: '', unit: '', quantity: '', price: '' });
+  const [newItemForm, setNewItemForm] = useState({ id: '', name: '', unit: '', quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
   const [isNewItem, setIsNewItem] = useState(false);
   const [editItemForm, setEditItemForm] = useState({ id: '', name: '', unit: '' });
   const [formData, setFormData] = useState({ quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
@@ -61,12 +61,12 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
         itemId: targetId,
         quantity: parseFloat(newItemForm.quantity),
         price: parseFloat(newItemForm.price) || 0,
-        date: new Date().toISOString().split('T')[0]
+        date: newItemForm.date || new Date().toISOString().split('T')[0]
       });
     }
 
     setSelectedItemId(targetId);
-    setNewItemForm({ id: '', name: '', unit: '', quantity: '', price: '' });
+    setNewItemForm({ id: '', name: '', unit: '', quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
     setIsNewItem(false);
     setIsAddingItem(false);
   };
@@ -193,6 +193,17 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                   </div>
                 )}
 
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tanggal</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={newItemForm.date} 
+                    onChange={e => setNewItemForm({...newItemForm, date: e.target.value})} 
+                    className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Jumlah {newItemForm.unit ? `(${newItemForm.unit})` : ''}</label>
@@ -206,14 +217,14 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Harga Satuan (Rp)</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-right">Harga Satuan (Rp)</label>
                     <input 
                       type="number" 
                       placeholder="0" 
                       required
                       value={newItemForm.price} 
                       onChange={e => setNewItemForm({...newItemForm, price: e.target.value})} 
-                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10 text-right" 
                     />
                   </div>
                 </div>
