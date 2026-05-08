@@ -166,6 +166,7 @@ export default function App() {
     remove('equityRecords', id);
   };
   const addInventoryItem = (item: InventoryItem) => upsert('inventoryItems', item.id, item);
+  const updateInventoryItem = (item: InventoryItem) => upsert('inventoryItems', item.id, item);
   const deleteInventoryItem = (id: string) => {
     const hasData = stockBatches.some(b => b.itemId === id) || stockOuts.some(so => so.itemId === id);
     if (hasData) {
@@ -241,6 +242,7 @@ export default function App() {
           onAddStock={onAddStock} 
           onRemoveStock={onRemoveStock} 
           addInventoryItem={addInventoryItem}
+          updateInventoryItem={updateInventoryItem}
           deleteInventoryItem={deleteInventoryItem}
           deleteStockEntry={deleteStockEntry}
         />;

@@ -298,7 +298,7 @@ export default function Transactions({
               setIsAdding(true);
             }
           }}
-          className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all"
+          className="w-full sm:w-auto bg-brand-blue text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-brand-blue/10 flex items-center justify-center gap-2 hover:bg-brand-blue/90 transition-all"
         >
           {isAdding ? 'Batal' : <><Plus className="w-4 h-4" /> Tambah Baru</>}
         </button>
@@ -405,7 +405,7 @@ export default function Transactions({
               <button 
                 type="submit" 
                 id="btn-save-transaction"
-                className="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:transform active:scale-95 transition-all cursor-pointer"
+                className="w-full bg-brand-blue text-white rounded-lg py-2 text-sm font-bold shadow-lg shadow-brand-blue/10 hover:bg-brand-blue/90 active:transform active:scale-95 transition-all cursor-pointer"
               >
                 {editingId ? 'Update Transaksi' : 'Simpan Transaksi'}
               </button>
@@ -419,7 +419,7 @@ export default function Transactions({
                   onClick={() => setSyncInventory(!syncInventory)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                     syncInventory 
-                    ? 'bg-indigo-50 border-indigo-200 text-indigo-600' 
+                    ? 'bg-brand-blue/5 border-brand-blue/20 text-brand-blue' 
                     : 'bg-slate-50 border-slate-100 text-slate-400'
                   }`}
                 >
@@ -504,13 +504,20 @@ export default function Transactions({
                         <label className="block text-[10px] font-bold text-slate-400 mb-1">Nama Barang</label>
                         <select 
                           value={selected.itemId}
-                          onChange={e => updateItemRow(index, 'itemId', e.target.value)}
-                          className="w-full bg-white border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
+                          onChange={e => {
+                            if (e.target.value === 'NEW') {
+                              setIsAddingNewItem(true);
+                            } else {
+                              updateItemRow(index, 'itemId', e.target.value);
+                            }
+                          }}
+                          className="w-full bg-white border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none appearance-none"
                         >
                           <option value="">-- Pilih Barang --</option>
                           {items.map(item => (
                             <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>
                           ))}
+                          <option value="NEW" className="font-bold text-indigo-600">+ Tambah Barang Baru</option>
                         </select>
                       </div>
                       <div className="md:col-span-1">
@@ -610,7 +617,7 @@ export default function Transactions({
                         </button>
                         <button 
                           onClick={() => deleteTransaction(t.id)}
-                          className="text-slate-400 hover:text-red-600 p-1 transition-colors cursor-pointer"
+                          className="text-slate-400 hover:text-brand-yellow hover:bg-brand-blue p-1 rounded transition-colors cursor-pointer"
                           title="Hapus"
                         >
                           <Trash2 size={16} />
