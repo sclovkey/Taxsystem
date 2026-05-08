@@ -6,19 +6,19 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Workspace from './components/Workspace';
-import Assistant from './components/Assistant';
 import Transactions from './components/Transactions';
 import Inventory from './components/Inventory';
 import Reports from './components/Reports';
 import Assets from './components/Assets';
 import BalanceSheet from './components/BalanceSheet';
 import EquityReport from './components/EquityReport';
+import TaxReport from './components/TaxReport';
 import Liabilities from './components/Liabilities';
 import Suppliers from './components/Suppliers';
 import Login from './components/Login';
 import { AnimatePresence, motion } from 'motion/react';
 import { Menu, X, Loader2 } from 'lucide-react';
-import { Transaction, Asset, EquityRecord, InventoryItem, StockBatch, StockOut, Supplier, Liability } from './types';
+import { Transaction, Asset, EquityRecord, InventoryItem, StockBatch, StockOut, Supplier, Customer, Liability } from './types';
 import { auth } from './lib/firebase';
 import { useFirebaseSync } from './lib/useFirebaseSync';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -36,6 +36,7 @@ export default function App() {
     stockOuts,
     assets,
     suppliers,
+    customers,
     liabilities,
     equityRecords,
     loading: dataLoading,
@@ -154,6 +155,7 @@ export default function App() {
   
   const addAsset = (a: Asset) => upsert('assets', a.id, a);
   const addSupplier = (s: Supplier) => upsert('suppliers', s.id, s);
+  const addCustomer = (c: Customer) => upsert('customers', c.id, c);
   const addEquityRecord = (r: EquityRecord) => upsert('equityRecords', r.id, r);
   const addInventoryItem = (item: InventoryItem) => upsert('inventoryItems', item.id, item);
   const deleteInventoryItem = (id: string) => {
@@ -239,9 +241,10 @@ export default function App() {
       case 'liabilities':
         return <Liabilities 
           liabilities={liabilities} 
-          suppliers={suppliers} 
+          customers={customers} 
           addLiability={(l) => upsert('liabilities', l.id, l)}
           updateLiability={(l) => upsert('liabilities', l.id, l)}
+          addCustomer={addCustomer}
         />;
       case 'suppliers':
         return <Suppliers suppliers={suppliers} addSupplier={addSupplier} />;
@@ -256,8 +259,8 @@ export default function App() {
         />;
       case 'equity':
         return <EquityReport equityRecords={equityRecords} addEquityRecord={addEquityRecord} currentProfit={currentProfit} />;
-      case 'assistant':
-        return <Assistant />;
+      case 'tax':
+        return <TaxReport transactions={transactions} />;
       default:
         return <Workspace transactions={transactions} setActiveTab={setActiveTab} />;
     }

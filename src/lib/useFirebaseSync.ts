@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from './firebase';
-import { Transaction, InventoryItem, StockBatch, StockOut, Asset, Supplier, Liability, EquityRecord } from '../types';
+import { Transaction, InventoryItem, StockBatch, StockOut, Asset, Supplier, Customer, Liability, EquityRecord } from '../types';
 
 export function useFirebaseSync(user: User | null) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -21,6 +21,7 @@ export function useFirebaseSync(user: User | null) {
   const [stockOuts, setStockOuts] = useState<StockOut[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
   const [equityRecords, setEquityRecords] = useState<EquityRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,7 @@ export function useFirebaseSync(user: User | null) {
       setStockOuts([]);
       setAssets([]);
       setSuppliers([]);
+      setCustomers([]);
       setLiabilities([]);
       setEquityRecords([]);
       setLoading(false);
@@ -43,7 +45,7 @@ export function useFirebaseSync(user: User | null) {
     const unsubscritbers: (() => void)[] = [];
 
     let loadedCounts = 0;
-    const TOTAL_COLLECTIONS = 8;
+    const TOTAL_COLLECTIONS = 9;
     const checkLoaded = () => {
       loadedCounts++;
       if (loadedCounts >= TOTAL_COLLECTIONS) {
@@ -87,6 +89,7 @@ export function useFirebaseSync(user: User | null) {
     syncCollection('stockOuts', setStockOuts);
     syncCollection('assets', setAssets, 'purchaseDate');
     syncCollection('suppliers', setSuppliers, 'name');
+    syncCollection('customers', setCustomers, 'name');
     syncCollection('liabilities', setLiabilities);
     syncCollection('equityRecords', setEquityRecords);
 
@@ -120,6 +123,7 @@ export function useFirebaseSync(user: User | null) {
     stockOuts,
     assets,
     suppliers,
+    customers,
     liabilities,
     equityRecords,
     loading,

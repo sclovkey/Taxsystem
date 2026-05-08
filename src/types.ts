@@ -51,9 +51,16 @@ export interface Supplier {
   category: string;
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  contact: string;
+  category: string;
+}
+
 export interface Liability {
   id: string;
-  supplierId: string;
+  customerId: string;
   date: string;
   dueDate: string;
   description: string;

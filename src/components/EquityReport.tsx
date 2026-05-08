@@ -11,7 +11,6 @@ interface EquityReportProps {
 export default function EquityReport({ equityRecords, addEquityRecord, currentProfit }: EquityReportProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
-    description: '',
     amount: '',
     type: 'Addition' as const,
     date: new Date().toISOString().split('T')[0]
@@ -25,16 +24,22 @@ export default function EquityReport({ equityRecords, addEquityRecord, currentPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.description || !formData.amount) return;
+    if (!formData.amount) return;
+
+    const typeLabels: Record<string, string> = {
+      Initial: 'Modal Awal',
+      Addition: 'Penambahan Modal',
+      Withdrawal: 'Prive'
+    };
 
     addEquityRecord({
       id: Math.random().toString(36).substr(2, 9),
       ...formData,
+      description: typeLabels[formData.type] || formData.type,
       amount: parseFloat(formData.amount)
     });
     setIsAdding(false);
     setFormData({
-      description: '',
       amount: '',
       type: 'Addition',
       date: new Date().toISOString().split('T')[0]
@@ -60,14 +65,25 @@ export default function EquityReport({ equityRecords, addEquityRecord, currentPr
       {isAdding && (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm animate-in zoom-in-95 duration-200">
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Keterangan</label>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Jenis Modal</label>
+              <select 
+                value={formData.type}
+                onChange={e => setFormData({...formData, type: e.target.value as any})}
+                className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none appearance-none"
+              >
+                <option value="Initial">Modal Awal Pemilik</option>
+                <option value="Addition">Penambahan Modal</option>
+                <option value="Withdrawal">Prive (Ambil Modal)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tanggal</label>
               <input 
-                type="text"
-                value={formData.description}
-                onChange={e => setFormData({...formData, description: e.target.value})}
+                type="date"
+                value={formData.date}
+                onChange={e => setFormData({...formData, date: e.target.value})}
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
-                placeholder="Misal: Penambahan modal alat"
               />
             </div>
             <div>
@@ -120,7 +136,9 @@ export default function EquityReport({ equityRecords, addEquityRecord, currentPr
             {equityRecords.map(r => (
               <div key={r.id} className="bg-white p-4 rounded-xl border border-slate-100 flex justify-between items-center shadow-sm">
                 <div>
-                  <p className="text-xs font-bold text-slate-900 leading-tight">{r.description}</p>
+                  <p className="text-xs font-bold text-slate-900 leading-tight">
+                    {r.type === 'Initial' ? 'Modal Awal' : r.type === 'Addition' ? 'Penambahan Modal' : 'Prive'}
+                  </p>
                   <p className="text-[10px] text-slate-400 mt-1">{r.date}</p>
                 </div>
                 <span className={`text-xs font-bold ${r.type === 'Withdrawal' ? 'text-red-500' : 'text-indigo-600'}`}>

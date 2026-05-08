@@ -85,13 +85,26 @@
       },
       "required": ["id", "name", "contact", "category", "userId"]
     },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer contact information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "contact": { "type": "string" },
+        "category": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "name", "contact", "category", "userId"]
+    },
     "Liability": {
       "title": "Liability",
       "description": "Liability or debt record",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "supplierId": { "type": "string" },
+        "customerId": { "type": "string" },
         "date": { "type": "string" },
         "dueDate": { "type": "string" },
         "description": { "type": "string" },
@@ -99,7 +112,7 @@
         "status": { "type": "string", "enum": ["Pending", "Paid", "Overdue"] },
         "userId": { "type": "string" }
       },
-      "required": ["id", "supplierId", "date", "dueDate", "description", "amount", "status", "userId"]
+      "required": ["id", "customerId", "date", "dueDate", "description", "amount", "status", "userId"]
     },
     "EquityRecord": {
       "title": "Equity Record",
@@ -140,6 +153,10 @@
     "users/{userId}/suppliers/{supplierId}": {
       "schema": "Supplier",
       "description": "User suppliers"
+    },
+    "users/{userId}/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "User customers"
     },
     "users/{userId}/liabilities/{liabilityId}": {
       "schema": "Liability",

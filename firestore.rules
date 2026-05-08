@@ -57,8 +57,13 @@ service cloud.firestore {
              data.userId == request.auth.uid;
     }
 
+    function isValidCustomer(data) {
+      return data.keys().hasAll(['id', 'name', 'contact', 'category', 'userId']) &&
+             data.userId == request.auth.uid;
+    }
+
     function isValidLiability(data) {
-      return data.keys().hasAll(['id', 'supplierId', 'date', 'dueDate', 'description', 'amount', 'status', 'userId']) &&
+      return data.keys().hasAll(['id', 'customerId', 'date', 'dueDate', 'description', 'amount', 'status', 'userId']) &&
              data.userId == request.auth.uid;
     }
 
@@ -108,6 +113,12 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidSupplier(incoming()) && isValidId(id);
         allow update: if isOwner(userId) && isValidSupplier(incoming());
+        allow delete: if isOwner(userId);
+      }
+      match /customers/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidCustomer(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidCustomer(incoming());
         allow delete: if isOwner(userId);
       }
       match /liabilities/{id} {
