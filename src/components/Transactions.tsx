@@ -10,8 +10,8 @@ interface TransactionsProps {
   addTransaction: (t: Transaction) => void;
   updateTransaction: (t: Transaction) => void;
   deleteTransaction: (id: string) => void;
-  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string }) => void;
-  onRemoveStock: (data: { itemId: string; quantity: number; date: string }) => void;
+  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string }) => string | null;
+  onRemoveStock: (data: { itemId: string; quantity: number; date: string }) => string | null;
   addInventoryItem: (item: InventoryItem) => void;
 }
 
@@ -130,30 +130,60 @@ export default function Transactions({
     if (editingId) {
       updateTransaction(transactionData);
     } else {
-      addTransaction(transactionData);
-
       // Automatic sync to inventory for new transactions
-      if (syncInventory) {
-        activeItems.forEach(item => {
+      let relatedId: string | undefined = undefined;
+      let relatedType: 'stockBatch' | 'stockOut' | undefined = undefined;
+
+      if (syncInventory && activeItems.length > 0) {
+        // For simplicity in linking, we currently only support linking the FIRST item in the list as the primary "related record"
+        // in terms of cascading delete. Or we could just link to the first one.
+        const item = activeItems[0];
+        const qty = parseFloat(item.quantity);
+        const itemPrice = parseFloat(item.price) || (parseFloat(formData.amount) / activeItems.length / qty);
+        
+        if (formData.type === 'Expense') {
+          const res = onAddStock({
+            itemId: item.itemId,
+            quantity: qty,
+            price: itemPrice, 
+            date: formData.date
+          });
+          if (res) {
+            relatedId = res as any;
+            relatedType = 'stockBatch';
+          }
+        } else {
+          const res = onRemoveStock({
+            itemId: item.itemId,
+            quantity: qty,
+            date: formData.date
+          });
+          if (res) {
+            relatedId = res as any;
+            relatedType = 'stockOut';
+          } else {
+            // If stock removal failed (alert already shown in onRemoveStock), stop
+            return;
+          }
+        }
+
+        // Handle additional items if any (they won't be linked for cascading delete in this simple implementation)
+        activeItems.slice(1).forEach(item => {
           const qty = parseFloat(item.quantity);
           const itemPrice = parseFloat(item.price) || (parseFloat(formData.amount) / activeItems.length / qty);
-          
           if (formData.type === 'Expense') {
-            onAddStock({
-              itemId: item.itemId,
-              quantity: qty,
-              price: itemPrice, 
-              date: formData.date
-            });
+            onAddStock({ itemId: item.itemId, quantity: qty, price: itemPrice, date: formData.date });
           } else {
-            onRemoveStock({
-              itemId: item.itemId,
-              quantity: qty,
-              date: formData.date
-            });
+            onRemoveStock({ itemId: item.itemId, quantity: qty, date: formData.date });
           }
         });
       }
+
+      addTransaction({
+        ...transactionData,
+        relatedId,
+        relatedType
+      });
     }
 
     setIsAdding(false);

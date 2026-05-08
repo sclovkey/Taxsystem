@@ -62,12 +62,23 @@ export default function App() {
       pricePerUnit: data.price
     };
     upsert('stockBatches', id, newBatch);
+    return id;
   };
 
   const onRemoveStock = (data: { itemId: string; quantity: number; date: string }) => {
     let remainingToRemove = data.quantity;
     let totalCOGS = 0;
     
+    // Check if enough stock exists first
+    const totalAvailable = stockBatches
+      .filter(b => b.itemId === data.itemId)
+      .reduce((sum, b) => sum + b.remainingQuantity, 0);
+
+    if (totalAvailable < data.quantity) {
+      alert("Stok tidak mencukupi untuk pengeluaran ini!");
+      return null;
+    }
+
     // Sort batches by date for FIFO
     const updatedBatches = [...stockBatches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
@@ -85,11 +96,6 @@ export default function App() {
       upsert('stockBatches', batch.id, batch);
     }
 
-    if (remainingToRemove > 0) {
-      alert("Stok tidak mencukupi untuk pengeluaran ini!");
-      return;
-    }
-
     const stockOutId = 'so' + Math.random().toString(36).substr(2, 5);
     upsert('stockOuts', stockOutId, {
       id: stockOutId,
@@ -98,6 +104,7 @@ export default function App() {
       quantity: data.quantity,
       cogs: totalCOGS
     });
+    return stockOutId;
   };
 
   const currentProfit = transactions.filter(t => t.type === 'Income').reduce((acc, t) => acc + t.amount, 0)
@@ -105,7 +112,45 @@ export default function App() {
 
   const addTransaction = (t: Transaction) => upsert('transactions', t.id, t);
   const updateTransaction = (t: Transaction) => upsert('transactions', t.id, t);
-  const deleteTransaction = (id: string) => remove('transactions', id);
+  const deleteTransaction = (id: string) => {
+    const t = transactions.find(item => item.id === id);
+    if (t?.relatedId && t.relatedType) {
+      if (t.relatedType === 'stockBatch') {
+        // If it's a purchase, check if any of it was consumed
+        const batch = stockBatches.find(b => b.id === t.relatedId);
+        if (batch && batch.remainingQuantity < batch.quantity) {
+          if (!confirm("Sebagian stok ini sudah terjual/keluar. Menghapus transaksi ini akan menyebabkan ketidaksesuaian stok. Lanjutkan?")) {
+            return;
+          }
+        }
+        remove('stockBatches', t.relatedId);
+      } else if (t.relatedType === 'stockOut') {
+        // If it's a sale, we should ideally restore the stock
+        const sOut = stockOuts.find(so => so.id === t.relatedId);
+        if (sOut) {
+          // Restore inventory (simplified undo FIFO)
+          // We look for batches of the same item and add back quantity to the latest ones first (inverse FIFO)
+          let toRestore = sOut.quantity;
+          const targetBatches = [...stockBatches]
+            .filter(b => b.itemId === sOut.itemId)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          
+          for (const batch of targetBatches) {
+            if (toRestore <= 0) break;
+            const canAdd = batch.quantity - batch.remainingQuantity;
+            const toAdd = Math.min(canAdd, toRestore);
+            if (toAdd > 0) {
+              batch.remainingQuantity += toAdd;
+              toRestore -= toAdd;
+              upsert('stockBatches', batch.id, batch);
+            }
+          }
+          remove('stockOuts', t.relatedId);
+        }
+      }
+    }
+    remove('transactions', id);
+  };
   
   const addAsset = (a: Asset) => upsert('assets', a.id, a);
   const addSupplier = (s: Supplier) => upsert('suppliers', s.id, s);

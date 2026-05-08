@@ -7,8 +7,8 @@ interface InventoryProps {
   items: InventoryItem[];
   batches: StockBatch[];
   stockOuts: StockOut[];
-  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string }) => void;
-  onRemoveStock: (data: { itemId: string; quantity: number; date: string }) => void;
+  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string }) => string | null;
+  onRemoveStock: (data: { itemId: string; quantity: number; date: string }) => string | null;
   addInventoryItem: (item: InventoryItem) => void;
 }
 

@@ -8,6 +8,8 @@ export interface Transaction {
   type: TransactionType;
   category: string;
   items?: { itemId: string; quantity: number; price?: number }[];
+  relatedId?: string;
+  relatedType?: 'stockBatch' | 'stockOut' | 'asset' | 'liability';
 }
 
 export interface Asset {
