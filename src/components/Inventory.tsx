@@ -558,7 +558,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">HPP (Beli)</th><th className="px-6 py-4 text-right">Harga Jual Satuan</th><th className="px-6 py-4 text-right">Total HPP</th><th className="px-6 py-4 text-right text-brand-blue">Total Jual</th><th className="px-6 py-4 text-center">Aksi</th></tr>
+                <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Tipe</th><th className="px-6 py-4 text-right">Qty</th><th className="px-6 py-4 text-right">HPP (Beli)</th><th className="px-6 py-4 text-right">Harga Jual Satuan</th><th className="px-6 py-4 text-right text-brand-blue">Total HPP</th><th className="px-6 py-4 text-center">Aksi</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {stockCard.map((entry) => (
@@ -569,7 +569,6 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.price.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.sellingPrice.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-right font-bold text-sm text-slate-900">Rp {entry.total.toLocaleString('id-ID')}</td>
-                    <td className="px-6 py-4 text-right font-bold text-sm text-brand-blue">Rp {(entry.qty * entry.sellingPrice).toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button 

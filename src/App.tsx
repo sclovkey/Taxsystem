@@ -293,6 +293,7 @@ export default function App() {
           transactions={transactions} 
           items={inventoryItems}
           batches={stockBatches}
+          stockOuts={stockOuts}
           addTransaction={addTransaction} 
           updateTransaction={updateTransaction}
           deleteTransaction={deleteTransaction}

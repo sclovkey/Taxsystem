@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Plus, Search, Filter, ArrowUpRight, ArrowDownLeft, Calendar, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Package, Truck, MinusCircle, PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import { Transaction, InventoryItem, StockBatch } from '../types';
+import { Transaction, InventoryItem, StockBatch, StockOut } from '../types';
 
 interface TransactionsProps {
   transactions: Transaction[];
   items: InventoryItem[];
   batches: StockBatch[];
+  stockOuts: StockOut[];
   addTransaction: (t: Transaction) => void;
   updateTransaction: (t: Transaction) => void;
   deleteTransaction: (id: string) => void;
@@ -20,6 +21,7 @@ export default function Transactions({
   transactions, 
   items, 
   batches,
+  stockOuts,
   addTransaction, 
   updateTransaction, 
   deleteTransaction, 
@@ -73,16 +75,8 @@ export default function Transactions({
   const calculateTotalFromItems = (itemsList: { itemId: string; quantity: string; price: string }[]) => {
     const total = itemsList.reduce((acc, curr) => {
       const q = parseFloat(curr.quantity) || 0;
-      if (formData.type === 'Income') {
-        const item = items.find(i => i.id === curr.itemId);
-        // Use Selling Price from inventory for the top amount (Total Harga Jual)
-        const sPrice = item?.sellingPrice || 0;
-        return acc + (q * sPrice);
-      } else {
-        // Use purchase price for expense calculation
-        const p = parseFloat(curr.price) || 0;
-        return acc + (q * p);
-      }
+      const p = parseFloat(curr.price) || 0;
+      return acc + (q * p);
     }, 0);
     if (total > 0) {
       setFormData(prev => ({ ...prev, amount: total.toString() }));
@@ -90,43 +84,51 @@ export default function Transactions({
   };
 
   const calculateSuggestedPrice = (itemId: string, quantity: number, type: 'Income' | 'Expense') => {
-    if (!itemId || quantity <= 0) return '';
+    if (!itemId) return '';
 
     const item = items.find(i => i.id === itemId);
     if (!item) return '';
 
-    const itemBatches = batches
-      .filter(b => b.itemId === itemId)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
     if (type === 'Income') {
-      // ALWAYS return HPP (Cost) for Sales details to track cost basis
-      let remaining = quantity;
-      let totalCost = 0;
-      let covered = 0;
-
-      for (const batch of itemBatches) {
-        if (remaining <= 0) break;
-        if (batch.remainingQuantity <= 0) continue;
-
-        const take = Math.min(batch.remainingQuantity, remaining);
-        totalCost += take * batch.pricePerUnit;
-        remaining -= take;
-        covered += take;
-      }
-
-      if (covered > 0) {
-        return (totalCost / covered).toString();
-      }
+      // Suggest default selling price from inventory for Sales
+      return item.sellingPrice?.toString() || '';
     } else {
       // Latest Purchase Price for Purchases
-      const latestBatch = [...itemBatches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+      const itemBatches = batches
+        .filter(b => b.itemId === itemId)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      const latestBatch = itemBatches[0];
       if (latestBatch) {
         return latestBatch.pricePerUnit.toString();
       }
     }
 
     return '';
+  };
+
+  const calculateHPP = (itemId: string, quantity: number) => {
+    if (!itemId || quantity <= 0) return 0;
+
+    const itemBatches = batches
+      .filter(b => b.itemId === itemId)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let remaining = quantity;
+    let totalCost = 0;
+    let covered = 0;
+
+    for (const batch of itemBatches) {
+      if (remaining <= 0) break;
+      if (batch.remainingQuantity <= 0) continue;
+
+      const take = Math.min(batch.remainingQuantity, remaining);
+      totalCost += take * batch.pricePerUnit;
+      remaining -= take;
+      covered += take;
+    }
+
+    return covered > 0 ? (totalCost / covered) : 0;
   };
 
   const generateDescription = (itemsList: typeof selectedItems, type: string) => {
@@ -607,9 +609,9 @@ export default function Transactions({
                   )}
                   
                   {selectedItems.map((selected, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end bg-slate-50/50 p-3 rounded-lg border border-slate-100">
-                      <div className="md:col-span-2">
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1">Nama Barang</label>
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                      <div className="md:col-span-4">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-tighter">Nama Barang</label>
                         <select 
                           value={selected.itemId}
                           onChange={e => {
@@ -619,7 +621,7 @@ export default function Transactions({
                               updateItemRow(index, 'itemId', e.target.value);
                             }
                           }}
-                          className="w-full bg-white border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none appearance-none"
+                          className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-brand-blue/10 outline-none appearance-none font-bold"
                         >
                           <option value="">-- Pilih Barang --</option>
                           {items.map(item => (
@@ -628,32 +630,39 @@ export default function Transactions({
                           <option value="NEW" className="font-bold text-indigo-600">+ Tambah Barang Baru</option>
                         </select>
                       </div>
-                      <div className="md:col-span-1">
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1">Kuantitas</label>
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-tighter">Qty</label>
                         <input 
                           type="number"
                           value={selected.quantity}
                           onChange={e => updateItemRow(index, 'quantity', e.target.value)}
-                          className="w-full bg-white border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/10 outline-none font-bold"
                           placeholder="0"
                         />
                       </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1">
-                          {formData.type === 'Income' ? 'Harga Beli (HPP Otomatis)' : 'Harga Beli Satuan (Rp)'}
+                      <div className="md:col-span-3">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-tighter">
+                          {formData.type === 'Income' ? 'Harga Jual Satuan' : 'Harga Beli Satuan'}
                         </label>
                         <input 
                           type="number"
                           value={selected.price}
-                          readOnly={formData.type === 'Income'}
                           onChange={e => updateItemRow(index, 'price', e.target.value)}
-                          className={`w-full border border-slate-100 rounded-lg px-4 py-2 text-sm outline-none ${
-                            formData.type === 'Income' ? 'bg-slate-100 text-slate-400 font-medium' : 'bg-white focus:ring-2 focus:ring-indigo-500/10'
-                          }`}
-                          placeholder={formData.type === 'Income' ? 'Terhitung FIFO' : '0'}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-brand-blue/10 outline-none font-bold text-brand-blue"
+                          placeholder="0"
                         />
                       </div>
-                      <div className="md:col-span-1 flex justify-end">
+                      
+                      {formData.type === 'Income' && (
+                        <div className="md:col-span-2 bg-slate-100/50 p-2 rounded-lg border border-slate-100">
+                          <label className="block text-[8px] font-black text-slate-400 uppercase mb-0.5 tracking-tighter">HPP (Otomatis)</label>
+                          <div className="text-xs font-bold text-slate-500">
+                            Rp {calculateHPP(selected.itemId, parseFloat(selected.quantity) || 0).toLocaleString('id-ID')}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className={`md:col-span-1 flex justify-end ${formData.type !== 'Income' ? 'md:col-span-3' : ''}`}>
                         {selectedItems.length > 1 && (
                           <button 
                             type="button"
@@ -703,10 +712,15 @@ export default function Transactions({
                             return (
                               <div key={idx} className="flex flex-col bg-slate-50 border border-slate-100 rounded-lg px-2 py-1">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{itemName}</span>
-                                <div className="flex items-center gap-1.5 mt-0.5">
+                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                   <span className="text-xs font-semibold text-indigo-600">{item.quantity}x</span>
                                   {item.price && (
-                                    <span className="text-[10px] text-slate-400">@ {t.type === 'Income' ? 'HPP' : 'Rp'} {item.price.toLocaleString('id-ID')}</span>
+                                    <span className="text-[10px] text-slate-400">@ Rp {item.price.toLocaleString('id-ID')}</span>
+                                  )}
+                                  {t.type === 'Income' && t.relatedId && (
+                                    <span className="text-[10px] text-slate-300 italic">
+                                      (HPP: Rp {((stockOuts.find(so => so.id === t.relatedId)?.cogs || 0) / item.quantity).toLocaleString('id-ID')})
+                                    </span>
                                   )}
                                 </div>
                               </div>
