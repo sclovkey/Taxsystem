@@ -53,7 +53,7 @@ export default function Transactions({
 
   const [syncInventory, setSyncInventory] = useState(false);
   const [isAddingNewItem, setIsAddingNewItem] = useState(false);
-  const [newItemFormData, setNewItemFormData] = useState({ name: '', unit: '' });
+  const [newItemFormData, setNewItemFormData] = useState({ name: '', unit: '', sellingPrice: '' });
   const [selectedItems, setSelectedItems] = useState<{ itemId: string; quantity: string; price: string }[]>([
     { itemId: items[0]?.id || '', quantity: '', price: '' }
   ]);
@@ -84,12 +84,20 @@ export default function Transactions({
   const calculateSuggestedPrice = (itemId: string, quantity: number, type: 'Income' | 'Expense') => {
     if (!itemId || quantity <= 0) return '';
 
+    const item = items.find(i => i.id === itemId);
+    if (!item) return '';
+
     const itemBatches = batches
       .filter(b => b.itemId === itemId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     if (type === 'Income') {
-      // FIFO Calculation for Sales (suggesting cost price)
+      // Prioritize selling price if defined
+      if (item.sellingPrice) {
+        return item.sellingPrice.toString();
+      }
+
+      // FIFO Calculation for Sales (fallback to cost price if no selling price)
       let remaining = quantity;
       let totalCost = 0;
       let covered = 0;
@@ -315,11 +323,12 @@ export default function Transactions({
     const newItem: InventoryItem = {
       id: 'i' + Math.random().toString(36).substr(2, 5),
       name: newItemFormData.name,
-      unit: newItemFormData.unit
+      unit: newItemFormData.unit,
+      sellingPrice: newItemFormData.sellingPrice ? parseFloat(newItemFormData.sellingPrice) : undefined
     };
     
     addInventoryItem(newItem);
-    setNewItemFormData({ name: '', unit: '' });
+    setNewItemFormData({ name: '', unit: '', sellingPrice: '' });
     setIsAddingNewItem(false);
     
     // Automatically select the new item in the last row if it's currently empty
@@ -557,13 +566,20 @@ export default function Transactions({
                               type="text"
                               value={newItemFormData.unit}
                               onChange={e => setNewItemFormData({...newItemFormData, unit: e.target.value})}
-                              placeholder="Contoh: cup, kg, Liter"
-                              className="flex-1 bg-white border border-slate-100 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500/10"
+                              placeholder="cup, kg, Liter"
+                              className="w-20 bg-white border border-slate-100 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-brand-blue/10"
+                            />
+                            <input 
+                              type="number"
+                              value={newItemFormData.sellingPrice}
+                              onChange={e => setNewItemFormData({...newItemFormData, sellingPrice: e.target.value})}
+                              placeholder="Harga Jual"
+                              className="flex-1 bg-white border border-slate-100 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-brand-blue/10"
                             />
                             <button 
                               type="button"
                               onClick={handleAddNewItem}
-                              className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm"
+                              className="bg-brand-blue text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm"
                             >
                               Tambah
                             </button>

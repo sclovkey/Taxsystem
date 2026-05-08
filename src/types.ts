@@ -25,6 +25,7 @@ export interface InventoryItem {
   id: string;
   name: string;
   unit: string;
+  sellingPrice?: number;
 }
 
 export interface StockBatch {

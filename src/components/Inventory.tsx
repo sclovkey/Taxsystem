@@ -30,9 +30,9 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
     }
   }, [items, selectedItemId]);
 
-  const [newItemForm, setNewItemForm] = useState({ id: '', name: '', unit: '', quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
+  const [newItemForm, setNewItemForm] = useState({ id: '', name: '', unit: '', quantity: '', price: '', sellingPrice: '', date: new Date().toISOString().split('T')[0] });
   const [isNewItem, setIsNewItem] = useState(false);
-  const [editItemForm, setEditItemForm] = useState({ id: '', name: '', unit: '' });
+  const [editItemForm, setEditItemForm] = useState({ id: '', name: '', unit: '', sellingPrice: '' });
   const [formData, setFormData] = useState({ quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
 
   const currentItem = items.find(i => i.id === selectedItemId);
@@ -47,7 +47,8 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
       const newItem: InventoryItem = {
         id: 'i' + Math.random().toString(36).substr(2, 5),
         name: newItemForm.name,
-        unit: newItemForm.unit
+        unit: newItemForm.unit,
+        sellingPrice: newItemForm.sellingPrice ? parseFloat(newItemForm.sellingPrice) : undefined
       };
       addInventoryItem(newItem);
       targetId = newItem.id;
@@ -66,7 +67,7 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
     }
 
     setSelectedItemId(targetId);
-    setNewItemForm({ id: '', name: '', unit: '', quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
+    setNewItemForm({ id: '', name: '', unit: '', quantity: '', price: '', sellingPrice: '', date: new Date().toISOString().split('T')[0] });
     setIsNewItem(false);
     setIsAddingItem(false);
   };
@@ -78,7 +79,8 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
     updateInventoryItem({
       id: editItemForm.id,
       name: editItemForm.name,
-      unit: editItemForm.unit
+      unit: editItemForm.unit,
+      sellingPrice: editItemForm.sellingPrice ? parseFloat(editItemForm.sellingPrice) : undefined
     });
 
     setIsEditingItem(false);
@@ -88,7 +90,8 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
     setEditItemForm({
       id: item.id,
       name: item.name,
-      unit: item.unit
+      unit: item.unit,
+      sellingPrice: item.sellingPrice?.toString() || ''
     });
     setIsEditingItem(true);
   };
@@ -144,7 +147,7 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                     onChange={e => {
                       if (e.target.value === 'NEW') {
                         setIsNewItem(true);
-                        setNewItemForm({ ...newItemForm, id: '', name: '', unit: '' });
+                        setNewItemForm({ ...newItemForm, id: '', name: '', unit: '', sellingPrice: '' });
                       } else {
                         setIsNewItem(false);
                         const selected = items.find(i => i.id === e.target.value);
@@ -152,7 +155,8 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                           ...newItemForm, 
                           id: e.target.value, 
                           name: selected?.name || '', 
-                          unit: selected?.unit || '' 
+                          unit: selected?.unit || '',
+                          sellingPrice: selected?.sellingPrice?.toString() || ''
                         });
                       }
                     }}
@@ -202,6 +206,18 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                     onChange={e => setNewItemForm({...newItemForm, date: e.target.value})} 
                     className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Harga Jual (Rp)</label>
+                  <input 
+                    type="number" 
+                    placeholder="Contoh: 100000" 
+                    value={newItemForm.sellingPrice} 
+                    onChange={e => setNewItemForm({...newItemForm, sellingPrice: e.target.value})} 
+                    className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">* Digunakan sebagai harga default saat penjualan.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -271,6 +287,16 @@ export default function Inventory({ items, batches, stockOuts, onAddStock, onRem
                     required 
                     value={editItemForm.unit} 
                     onChange={e => setEditItemForm({...editItemForm, unit: e.target.value})} 
+                    className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-left">Harga Jual (Rp)</label>
+                  <input 
+                    type="number" 
+                    placeholder="Harga Jual" 
+                    value={editItemForm.sellingPrice} 
+                    onChange={e => setEditItemForm({...editItemForm, sellingPrice: e.target.value})} 
                     className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
                   />
                 </div>
