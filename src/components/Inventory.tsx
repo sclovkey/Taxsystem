@@ -49,8 +49,19 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
 
     if (isNewItem) {
       if (!newItemForm.name || !newItemForm.unit) return;
+      
+      // Check for duplicate names
+      const existing = items.find(i => i.name.toLowerCase() === newItemForm.name.toLowerCase());
+      if (existing) {
+        alert(`Barang dengan nama "${existing.name}" sudah ada.`);
+        setSelectedItemId(existing.id);
+        setIsAddingItem(false);
+        setIsNewItem(false);
+        return;
+      }
+
       const newItem: InventoryItem = {
-        id: 'i' + Math.random().toString(36).substr(2, 5),
+        id: 'i' + Date.now() + Math.random().toString(36).substr(2, 5),
         name: newItemForm.name,
         unit: newItemForm.unit,
         sellingPrice: newItemForm.sellingPrice ? parseFloat(newItemForm.sellingPrice) : undefined

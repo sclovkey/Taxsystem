@@ -54,6 +54,14 @@ export default function Transactions({
   });
 
   const [syncInventory, setSyncInventory] = useState(false);
+  
+  // Logic to handle automatic sync based on category
+  React.useEffect(() => {
+    if (formData.category === 'Pembelian' || formData.category === 'Penjualan') {
+      setSyncInventory(true);
+    }
+  }, [formData.category]);
+
   const [isAddingNewItem, setIsAddingNewItem] = useState(false);
   const [newItemFormData, setNewItemFormData] = useState({ name: '', unit: '' });
   const [sessionNewItems, setSessionNewItems] = useState<InventoryItem[]>([]);
@@ -404,7 +412,7 @@ export default function Transactions({
     // Reset state
     setIsAdding(false);
     setEditingId(null);
-    setSyncInventory(false);
+    // Don't reset syncInventory here, let the useEffect handle it for next entry
     setIsAddingNewItem(false);
     setSelectedItems([{ itemId: items[0]?.id || '', quantity: '', price: '' }]);
     setFormData({
@@ -451,8 +459,24 @@ export default function Transactions({
     e.preventDefault();
     if (!newItemFormData.name || !newItemFormData.unit) return;
     
+    // Check if item with same name already exists to prevent duplicates
+    const existingItem = items.find(i => i.name.toLowerCase() === newItemFormData.name.toLowerCase());
+    if (existingItem) {
+      alert(`Barang dengan nama "${existingItem.name}" sudah ada di persediaan. Menggunakan data yang sudah ada.`);
+      const updatedItems = [...selectedItems];
+      const lastIdx = updatedItems.length - 1;
+      if (lastIdx >= 0) {
+        updatedItems[lastIdx] = { ...updatedItems[lastIdx], itemId: existingItem.id };
+        setSelectedItems(updatedItems);
+        calculateTotalFromItems(updatedItems);
+      }
+      setNewItemFormData({ name: '', unit: '' });
+      setIsAddingNewItem(false);
+      return;
+    }
+
     const newItem: InventoryItem = {
-      id: 'i' + Math.random().toString(36).substr(2, 5),
+      id: 'i' + Date.now() + Math.random().toString(36).substr(2, 5),
       name: newItemFormData.name,
       unit: newItemFormData.unit
     };
