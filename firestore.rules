@@ -34,19 +34,19 @@ service cloud.firestore {
     function isValidInventoryItem(data) {
       return data.keys().hasAll(['id', 'name', 'unit', 'userId']) &&
              data.id is string && data.name is string && data.unit is string &&
-             (data.sellingPrice == null || data.sellingPrice is number) &&
+             (data.get('sellingPrice', null) == null || data.sellingPrice is number) &&
              data.userId == request.auth.uid;
     }
 
     function isValidStockBatch(data) {
       return data.keys().hasAll(['id', 'itemId', 'date', 'quantity', 'remainingQuantity', 'pricePerUnit', 'userId']) &&
-             (data.sellingPrice == null || data.sellingPrice is number) &&
+             (data.get('sellingPrice', null) == null || data.sellingPrice is number) &&
              data.userId == request.auth.uid;
     }
 
     function isValidStockOut(data) {
       return data.keys().hasAll(['id', 'itemId', 'date', 'quantity', 'cogs', 'userId']) &&
-             (data.sellingPrice == null || data.sellingPrice is number) &&
+             (data.get('sellingPrice', null) == null || data.sellingPrice is number) &&
              data.userId == request.auth.uid;
     }
 

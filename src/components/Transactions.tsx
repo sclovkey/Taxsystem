@@ -254,7 +254,7 @@ export default function Transactions({
       if (syncInventory && activeItems.length > 0) {
         const item = activeItems[0];
         const qty = parseFloat(item.quantity);
-        const masterItem = items.find(i => i.id === item.itemId);
+        const masterItem = allItems.find(i => i.id === item.itemId);
         // Expense: itemPrice is purchase cost. Income: itemPrice is selling price.
         const itemPrice = parseFloat(item.price) || (amountVal / activeItems.length / qty);
         
@@ -289,7 +289,7 @@ export default function Transactions({
         // Handle additional items
         activeItems.slice(1).forEach(item => {
           const qty = parseFloat(item.quantity);
-          const masterItem = items.find(i => i.id === item.itemId);
+          const masterItem = allItems.find(i => i.id === item.itemId);
           const iPrice = parseFloat(item.price) || (amountVal / activeItems.length / qty);
           if (formData.type === 'Expense') {
             onAddStock({ 
