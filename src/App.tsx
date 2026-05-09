@@ -28,7 +28,15 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const {
     transactions,
@@ -444,6 +452,8 @@ export default function App() {
           assets={assets} 
           equityRecords={equityRecords} 
           liabilities={liabilities}
+          monthlyOpeningBalances={monthlyOpeningBalances}
+          stockBatches={stockBatches}
         />;
       case 'equity':
         return <EquityReport 
@@ -473,13 +483,18 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans relative">
-      {/* Mobile Menu Button */}
-      <button 
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:text-indigo-600"
+      {/* Menu Button - Visible when sidebar is closed */}
+      <motion.button 
+        initial={false}
+        animate={{ 
+          left: isSidebarOpen ? -100 : 16,
+          opacity: isSidebarOpen ? 0 : 1
+        }}
+        onClick={() => setIsSidebarOpen(true)}
+        className="fixed top-4 z-30 p-2 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:text-brand-blue hover:border-brand-blue transition-colors group"
       >
-        {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+        <Menu size={24} className="group-hover:scale-110 transition-transform" />
+      </motion.button>
 
       {/* Sidebar with mobile drawer support */}
       <Sidebar 
@@ -492,7 +507,14 @@ export default function App() {
         setIsOpen={setIsSidebarOpen}
       />
       
-      <main className="flex-1 h-screen overflow-y-auto bg-slate-50/50 p-4 md:p-8 pt-16 lg:pt-8">
+      <motion.main 
+        initial={false}
+        animate={{ 
+          marginLeft: (isDesktop && isSidebarOpen) ? 256 : 0,
+        }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="flex-1 h-screen overflow-y-auto bg-slate-50/50 p-4 md:p-8 pt-16 lg:pt-8"
+      >
         <div className="max-w-6xl mx-auto h-full px-2 md:px-0">
           {dataLoading ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -503,10 +525,10 @@ export default function App() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
                 className="h-full"
               >
                 {renderContent()}
@@ -514,7 +536,7 @@ export default function App() {
             </AnimatePresence>
           )}
         </div>
-      </main>
+      </motion.main>
     </div>
   );
 }

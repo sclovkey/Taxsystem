@@ -15,7 +15,8 @@ import {
   FileText,
   Calculator,
   LogOut,
-  Banknote
+  Banknote,
+  X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { logout } from '../lib/firebase';
@@ -52,17 +53,33 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }: 
         />
       )}
 
-      <div className={`
-        fixed lg:static inset-y-0 left-0 z-40
-        w-64 h-screen bg-brand-blue border-r border-slate-800 
-        flex flex-col p-6 flex-shrink-0 transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-      <div className="flex items-center gap-3 mb-10">
-        <div className="w-8 h-8 bg-brand-yellow rounded-lg flex items-center justify-center">
-          <Zap className="text-brand-blue w-5 h-5 fill-current" />
+      <motion.div 
+        initial={false}
+        animate={{ 
+          x: isOpen ? 0 : -256,
+          opacity: isOpen ? 1 : 0
+        }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className={`
+          fixed inset-y-0 left-0 z-40
+          w-64 h-screen bg-brand-blue border-r border-slate-800 
+          flex flex-col p-6 flex-shrink-0
+        `}
+      >
+      <div className="flex items-center justify-between gap-3 mb-10">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-brand-yellow rounded-lg flex items-center justify-center">
+            <Zap className="text-brand-blue w-5 h-5 fill-current" />
+          </div>
+          <span className="font-sans font-bold text-xl tracking-tight text-white">Bijikopi Finance</span>
         </div>
-        <span className="font-sans font-bold text-xl tracking-tight text-white">Finance UMKM</span>
+        <button 
+          onClick={() => setIsOpen(false)}
+          className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 group transition-colors"
+          title="Tutup Menu"
+        >
+          <X size={20} className="group-hover:scale-110 transition-transform" />
+        </button>
       </div>
  
       <nav className="flex flex-col gap-1 overflow-y-auto pr-2">
@@ -96,7 +113,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }: 
           Keluar
         </button>
       </div>
-      </div>
+      </motion.div>
     </>
   );
 }

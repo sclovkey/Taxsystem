@@ -1,18 +1,40 @@
 import React from 'react';
-import { Target, Shield, Briefcase } from 'lucide-react';
-import { Transaction, Asset, EquityRecord, Liability } from '../types';
+import { Target, Shield, Briefcase, Package } from 'lucide-react';
+import { Transaction, Asset, EquityRecord, Liability, MonthlyOpeningBalance, StockBatch } from '../types';
 
 interface BalanceSheetProps {
   transactions: Transaction[];
   assets: Asset[];
   equityRecords: EquityRecord[];
   liabilities: Liability[];
+  monthlyOpeningBalances: MonthlyOpeningBalance[];
+  stockBatches: StockBatch[];
 }
 
-export default function BalanceSheet({ transactions, assets, equityRecords, liabilities }: BalanceSheetProps) {
-  // 1. Assets Calculation
-  const cash = transactions.filter(t => t.type === 'Income').reduce((acc, t) => acc + t.amount, 0) 
-               - transactions.filter(t => t.type === 'Expense').reduce((acc, t) => acc + t.amount, 0);
+export default function BalanceSheet({ 
+  transactions, 
+  assets, 
+  equityRecords, 
+  liabilities, 
+  monthlyOpeningBalances,
+  stockBatches
+}: BalanceSheetProps) {
+  // 1. Assets Calculation - Current Month Cash
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentOpeningBalance = monthlyOpeningBalances.find(b => b.month === currentMonth)?.amount || 0;
+  
+  const monthIncoming = transactions
+    .filter(t => t.date.startsWith(currentMonth) && t.type === 'Income')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const monthOutgoing = transactions
+    .filter(t => t.date.startsWith(currentMonth) && t.type === 'Expense')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const cash = currentOpeningBalance + monthIncoming - monthOutgoing;
+
+  // 2. Inventory Value (Asset)
+  const inventoryValue = stockBatches.reduce((acc, batch) => acc + (batch.remainingQuantity * batch.pricePerUnit), 0);
 
   const calculateDepreciationAccumulated = (asset: Asset) => {
     const annualDepreciation = (asset.cost - asset.salvageValue) / asset.usefulLifePoints;
@@ -30,22 +52,16 @@ export default function BalanceSheet({ transactions, assets, equityRecords, liab
   const totalAccumulatedDepreciation = assets.reduce((acc, a) => acc + calculateDepreciationAccumulated(a), 0);
   const netFixedAssets = totalCostAssets - totalAccumulatedDepreciation;
   
-  const totalAssets = cash + netFixedAssets;
+  const totalAssets = cash + inventoryValue + netFixedAssets;
 
-  // 2. Liabilities
+  // 3. Liabilities
   const totalLiabilities = liabilities
     .filter(l => l.status !== 'Paid')
     .reduce((acc, l) => acc + l.amount, 0);
 
-  // 3. Equity Calculation
-  const ownerEquity = equityRecords.reduce((acc, r) => {
-    if (r.type === 'Initial' || r.type === 'Addition' || r.type === 'ProfitDist') return acc + r.amount;
-    if (r.type === 'Withdrawal') return acc - r.amount;
-    return acc;
-  }, 0);
-
-  // Note: Standard accounting: Assets = Liabilities + Equity
-  // In our simplified UMKM model, Equity usually absorbs everything.
+  // 4. Equity Calculation
+  // Standard accounting: Assets = Liabilities + Equity
+  // Equity = Assets - Liabilities
   const totalEquities = totalAssets - totalLiabilities;
 
   return (
@@ -68,6 +84,13 @@ export default function BalanceSheet({ transactions, assets, equityRecords, liab
               <div className="flex justify-between items-center py-3 border-b border-slate-50 px-1">
                 <span className="text-sm font-medium text-slate-600">Kas & Setara Kas</span>
                 <span className="font-bold text-slate-900">Rp {cash.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-slate-50 px-1">
+                <span className="text-sm font-medium text-slate-600">Persediaan Barang</span>
+                <div className="text-right">
+                  <p className="font-bold text-slate-900">Rp {inventoryValue.toLocaleString('id-ID')}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Berdasarkan Nilai Beli</p>
+                </div>
               </div>
             </div>
             <div>
@@ -124,8 +147,8 @@ export default function BalanceSheet({ transactions, assets, equityRecords, liab
             </div>
           </div>
 
-          <div className={`p-4 rounded-2xl text-center font-bold text-sm shadow-sm transition-all ${totalAssets === (totalLiabilities + totalEquities) ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-            {totalAssets === (totalLiabilities + totalEquities) ? '✅ Neraca Seimbang (Balanced)' : '❌ Neraca Tidak Seimbang'}
+          <div className={`p-4 rounded-2xl text-center font-bold text-sm shadow-sm transition-all ${Math.abs(totalAssets - (totalLiabilities + totalEquities)) < 1 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+            {Math.abs(totalAssets - (totalLiabilities + totalEquities)) < 1 ? '✅ Neraca Seimbang (Balanced)' : '❌ Neraca Tidak Seimbang'}
           </div>
         </div>
       </div>
