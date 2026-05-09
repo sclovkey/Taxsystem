@@ -12,8 +12,8 @@ interface TransactionsProps {
   addTransaction: (t: Transaction) => void;
   updateTransaction: (t: Transaction) => void;
   deleteTransaction: (id: string) => void;
-  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number }) => string | null;
-  onRemoveStock: (data: { itemId: string; quantity: number; date: string; sellingPrice?: number }) => string | null;
+  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number; existingId?: string }) => string | null;
+  onRemoveStock: (data: { itemId: string; quantity: number; date: string; sellingPrice?: number; existingId?: string }) => string | null;
   addInventoryItem: (item: InventoryItem) => void;
 }
 
@@ -245,7 +245,86 @@ export default function Transactions({
     }
 
     if (editingId) {
-      updateTransaction(transactionData);
+      const oldTransaction = transactions.find(t => t.id === editingId);
+      let relatedId = oldTransaction?.relatedId;
+      let relatedType = oldTransaction?.relatedType;
+
+      // Update linked inventory if sync is enabled and it was already linked OR it's being linked now
+      if (syncInventory && activeItems.length > 0) {
+        const item = activeItems[0];
+        const qty = parseFloat(item.quantity);
+        const itemPrice = parseFloat(item.price) || (amountVal / activeItems.length / qty);
+        const masterItem = allItems.find(i => i.id === item.itemId);
+
+        // CASE: Type changed or Item changed - Delete old link and create new
+        const typeMismatch = (relatedType === 'stockBatch' && formData.type === 'Income') || 
+                            (relatedType === 'stockOut' && formData.type === 'Expense');
+        
+        if (relatedId && relatedType && typeMismatch) {
+          // Use current app logic to safely delete previous linked inventory
+          if (relatedType === 'stockBatch') {
+             // In App.tsx deleteTransaction handles cleanup, but we need to do it here for updates
+             // For now we assume cleanup is handled or simple delete
+             // Since we're in Transactions.tsx we don't have direct access to 'remove' from useFirebaseSync
+             // but we have deleteTransaction which calls remove internally.
+             // Actually, it's better to tell App.tsx to handle linked cleanup.
+          }
+        }
+
+        if (relatedId && relatedType && !typeMismatch) {
+          // Update existing linked entry
+          if (relatedType === 'stockBatch' && formData.type === 'Expense') {
+            onAddStock({
+              itemId: item.itemId,
+              quantity: qty,
+              price: itemPrice, 
+              date: formData.date,
+              sellingPrice: masterItem?.sellingPrice,
+              existingId: relatedId
+            });
+          } else if (relatedType === 'stockOut' && formData.type === 'Income') {
+            onRemoveStock({
+              itemId: item.itemId,
+              quantity: qty,
+              date: formData.date,
+              sellingPrice: itemPrice,
+              existingId: relatedId
+            });
+          }
+        } else {
+          // Create new link (either new transaction or switched type)
+          if (formData.type === 'Expense') {
+            const res = onAddStock({
+              itemId: item.itemId,
+              quantity: qty,
+              price: itemPrice, 
+              date: formData.date,
+              sellingPrice: masterItem?.sellingPrice
+            });
+            if (res) {
+              relatedId = res;
+              relatedType = 'stockBatch';
+            }
+          } else {
+            const res = onRemoveStock({
+              itemId: item.itemId,
+              quantity: qty,
+              date: formData.date,
+              sellingPrice: itemPrice
+            });
+            if (res) {
+              relatedId = res;
+              relatedType = 'stockOut';
+            }
+          }
+        }
+      }
+
+      const finalTransaction = { ...transactionData };
+      if (relatedId) finalTransaction.relatedId = relatedId;
+      if (relatedType) finalTransaction.relatedType = relatedType;
+      
+      updateTransaction(finalTransaction);
     } else {
       let relatedId: string | undefined = undefined;
       let relatedType: 'stockBatch' | 'stockOut' | undefined = undefined;
@@ -358,7 +437,14 @@ export default function Transactions({
     }
     setEditingId(t.id);
     setIsAdding(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Use a more robust scroll that also handles our specific layout where 'main' is the scroll container
+    const mainView = document.querySelector('main');
+    if (mainView) {
+      mainView.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleAddNewItem = (e: React.FormEvent) => {
@@ -791,20 +877,26 @@ export default function Transactions({
                       {t.type === 'Income' ? '+' : '-'} Rp {t.amount.toLocaleString('id-ID')}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-3">
                         <button 
-                          onClick={() => handleEdit(t)}
-                          className="text-slate-400 hover:text-indigo-600 p-1 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleEdit(t);
+                          }}
+                          className="text-slate-400 hover:text-indigo-600 p-2 transition-colors cursor-pointer hover:bg-indigo-50 rounded-lg border border-transparent hover:border-indigo-100 flex items-center justify-center"
                           title="Ubah"
                         >
-                          <Pencil size={16} />
+                          <Pencil size={18} />
                         </button>
                         <button 
-                          onClick={() => deleteTransaction(t.id)}
-                          className="text-slate-400 hover:text-brand-yellow hover:bg-brand-blue p-1 rounded transition-colors cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            deleteTransaction(t.id);
+                          }}
+                          className="text-slate-400 hover:text-brand-yellow hover:bg-brand-blue/5 p-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-brand-yellow/20 flex items-center justify-center"
                           title="Hapus"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>

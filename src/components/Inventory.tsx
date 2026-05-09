@@ -575,7 +575,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-sm text-slate-900">Rp {entry.total.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-2">
                         <button 
                           type="button"
                           onClick={(e) => {
@@ -583,10 +583,10 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                             e.stopPropagation();
                             startEditingStock(entry);
                           }}
-                          className="p-2 text-slate-400 hover:text-brand-blue hover:bg-brand-blue/5 rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
+                          className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer border border-transparent hover:border-indigo-100 flex items-center justify-center"
                           title="Edit Catatan"
                         >
-                          <Pencil size={16} />
+                          <Pencil size={18} />
                         </button>
                         <button 
                           type="button"
@@ -595,10 +595,10 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                             e.stopPropagation();
                             deleteStockEntry(entry.id, entry.type as 'IN' | 'OUT');
                           }}
-                          className="p-2 text-brand-yellow-dark hover:text-brand-yellow hover:bg-brand-blue rounded-lg transition-all cursor-pointer inline-flex items-center justify-center"
+                          className="p-2.5 text-slate-400 hover:text-brand-yellow hover:bg-brand-blue/5 rounded-lg transition-all cursor-pointer border border-transparent hover:border-brand-yellow/20 flex items-center justify-center"
                           title="Hapus Catatan"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>

@@ -54,8 +54,8 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  const onAddStock = (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number }) => {
-    const id = 'b' + Math.random().toString(36).substr(2, 5);
+  const onAddStock = (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number; existingId?: string }) => {
+    const id = data.existingId || 'b' + Date.now() + Math.random().toString(36).substr(2, 5);
     const newBatch: StockBatch = {
       id,
       itemId: data.itemId,
@@ -63,17 +63,45 @@ export default function App() {
       quantity: data.quantity,
       remainingQuantity: data.quantity,
       pricePerUnit: data.price,
-      sellingPrice: data.sellingPrice
+      sellingPrice: data.sellingPrice,
+      userId: '' // Handled by upsert
     };
+
+    if (data.existingId) {
+      const old = stockBatches.find(b => b.id === data.existingId);
+      if (old) {
+        newBatch.remainingQuantity = old.remainingQuantity + (data.quantity - old.quantity);
+        if (newBatch.remainingQuantity < 0) {
+          alert("Gagal merubah kuantitas: Stok di batch ini sudah terjual melebihi kuantitas baru.");
+          return null;
+        }
+      }
+    }
+
     upsert('stockBatches', id, newBatch);
     return id;
   };
 
-  const onRemoveStock = (data: { itemId: string; quantity: number; date: string; sellingPrice?: number }) => {
+  const onRemoveStock = (data: { itemId: string; quantity: number; date: string; sellingPrice?: number; existingId?: string }) => {
+    if (data.existingId) {
+      const oldOut = stockOuts.find(so => so.id === data.existingId);
+      if (oldOut) {
+         if (oldOut.quantity !== data.quantity || oldOut.itemId !== data.itemId) {
+           alert("Perubahan kuantitas penjualan lewat edit transaksi belum didukung penuh. Silakan hapus dan input ulang untuk hasil yang akurat.");
+           return data.existingId;
+         }
+         upsert('stockOuts', data.existingId, {
+           ...oldOut,
+           sellingPrice: data.sellingPrice,
+           date: data.date
+         });
+         return data.existingId;
+      }
+    }
+
     let remainingToRemove = data.quantity;
     let totalCOGS = 0;
     
-    // Check if enough stock exists first
     const totalAvailable = stockBatches
       .filter(b => b.itemId === data.itemId)
       .reduce((sum, b) => sum + b.remainingQuantity, 0);
@@ -83,7 +111,6 @@ export default function App() {
       return null;
     }
 
-    // Sort batches by date for FIFO
     const updatedBatches = [...stockBatches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
     for (const batch of updatedBatches) {
@@ -91,23 +118,21 @@ export default function App() {
       if (batch.itemId !== data.itemId || batch.remainingQuantity <= 0) continue;
       
       const quantityFromThisBatch = Math.min(batch.remainingQuantity, remainingToRemove);
-      
       batch.remainingQuantity -= quantityFromThisBatch;
       remainingToRemove -= quantityFromThisBatch;
       totalCOGS += quantityFromThisBatch * batch.pricePerUnit;
-      
-      // Update each batch in Firebase
       upsert('stockBatches', batch.id, batch);
     }
 
-    const stockOutId = 'so' + Math.random().toString(36).substr(2, 5);
+    const stockOutId = 'so' + Date.now() + Math.random().toString(36).substr(2, 5);
     upsert('stockOuts', stockOutId, {
       id: stockOutId,
       itemId: data.itemId,
       date: data.date,
       quantity: data.quantity,
       cogs: totalCOGS,
-      sellingPrice: data.sellingPrice
+      sellingPrice: data.sellingPrice,
+      userId: ''
     });
     return stockOutId;
   };
