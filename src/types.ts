@@ -35,6 +35,7 @@ export interface StockBatch {
   quantity: number;
   remainingQuantity: number;
   pricePerUnit: number;
+  sellingPrice?: number;
 }
 
 export interface StockOut {
@@ -43,6 +44,7 @@ export interface StockOut {
   date: string;
   quantity: number;
   cogs: number; // Cost of Goods Sold calculated via FIFO
+  sellingPrice?: number;
 }
 
 export interface Supplier {

@@ -24,6 +24,7 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "unit": { "type": "string" },
+        "sellingPrice": { "type": "number" },
         "userId": { "type": "string" }
       },
       "required": ["id", "name", "unit", "userId"]
@@ -39,6 +40,7 @@
         "quantity": { "type": "number" },
         "remainingQuantity": { "type": "number" },
         "pricePerUnit": { "type": "number" },
+        "sellingPrice": { "type": "number" },
         "userId": { "type": "string" }
       },
       "required": ["id", "itemId", "date", "quantity", "remainingQuantity", "pricePerUnit", "userId"]
@@ -53,6 +55,7 @@
         "date": { "type": "string" },
         "quantity": { "type": "number" },
         "cogs": { "type": "number" },
+        "sellingPrice": { "type": "number" },
         "userId": { "type": "string" }
       },
       "required": ["id", "itemId", "date", "quantity", "cogs", "userId"]

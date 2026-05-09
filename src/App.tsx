@@ -54,7 +54,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  const onAddStock = (data: { itemId: string; quantity: number; price: number; date: string }) => {
+  const onAddStock = (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number }) => {
     const id = 'b' + Math.random().toString(36).substr(2, 5);
     const newBatch: StockBatch = {
       id,
@@ -62,13 +62,14 @@ export default function App() {
       date: data.date,
       quantity: data.quantity,
       remainingQuantity: data.quantity,
-      pricePerUnit: data.price
+      pricePerUnit: data.price,
+      sellingPrice: data.sellingPrice
     };
     upsert('stockBatches', id, newBatch);
     return id;
   };
 
-  const onRemoveStock = (data: { itemId: string; quantity: number; date: string }) => {
+  const onRemoveStock = (data: { itemId: string; quantity: number; date: string; sellingPrice?: number }) => {
     let remainingToRemove = data.quantity;
     let totalCOGS = 0;
     
@@ -105,7 +106,8 @@ export default function App() {
       itemId: data.itemId,
       date: data.date,
       quantity: data.quantity,
-      cogs: totalCOGS
+      cogs: totalCOGS,
+      sellingPrice: data.sellingPrice
     });
     return stockOutId;
   };
@@ -182,7 +184,7 @@ export default function App() {
     remove('inventoryItems', id);
   };
   
-  const updateStockEntry = (id: string, type: 'IN' | 'OUT', data: { quantity: number; price: number; date: string }) => {
+  const updateStockEntry = (id: string, type: 'IN' | 'OUT', data: { quantity: number; price: number; sellingPrice?: number; date: string }) => {
     if (type === 'IN') {
       const batch = stockBatches.find(b => b.id === id);
       if (!batch) return;
@@ -200,6 +202,7 @@ export default function App() {
         quantity: data.quantity,
         remainingQuantity: newRemaining,
         pricePerUnit: data.price,
+        sellingPrice: data.sellingPrice,
         date: data.date
       };
       
@@ -215,8 +218,6 @@ export default function App() {
         });
       }
     } else {
-      // OUT is harder because of COGS. For simplicity, we just block major qty changes or recalculate.
-      // But updating date/price (profit) of a Sale is common.
       const sOut = stockOuts.find(so => so.id === id);
       if (!sOut) return;
 
@@ -227,20 +228,20 @@ export default function App() {
 
       const updatedOut: StockOut = {
         ...sOut,
+        sellingPrice: data.sellingPrice,
         date: data.date
       };
-      // Note: price for StockOut in this context is usually the Sale Price if it comes from a transaction.
-      // But StockOut itself only stores COGS.
       
       upsert('stockOuts', id, updatedOut);
 
       // Update linked transaction
       const linkedT = transactions.find(t => t.relatedId === id && t.relatedType === 'stockOut');
       if (linkedT) {
-        // If it's a sale, 'data.price' here would be the Sale Price
+        // If sellingPrice is provided, it updates the transaction amount
+        const newAmount = data.sellingPrice ? data.quantity * data.sellingPrice : linkedT.amount;
         upsert('transactions', linkedT.id, {
           ...linkedT,
-          amount: data.quantity * data.price,
+          amount: newAmount,
           date: data.date
         });
       }

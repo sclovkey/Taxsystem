@@ -8,13 +8,13 @@ interface InventoryProps {
   batches: StockBatch[];
   stockOuts: StockOut[];
   transactions: Transaction[];
-  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string }) => string | null;
-  onRemoveStock: (data: { itemId: string; quantity: number; date: string }) => string | null;
+  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number }) => string | null;
+  onRemoveStock: (data: { itemId: string; quantity: number; date: string; sellingPrice?: number }) => string | null;
   addInventoryItem: (item: InventoryItem) => void;
   updateInventoryItem: (item: InventoryItem) => void;
   deleteInventoryItem: (id: string) => void;
   deleteStockEntry: (id: string, type: 'IN' | 'OUT') => void;
-  updateStockEntry: (id: string, type: 'IN' | 'OUT', data: { quantity: number; price: number; date: string }) => void;
+  updateStockEntry: (id: string, type: 'IN' | 'OUT', data: { quantity: number; price: number; sellingPrice?: number; date: string }) => void;
 }
 
 export default function Inventory({ items, batches, stockOuts, transactions, onAddStock, onRemoveStock, addInventoryItem, updateInventoryItem, deleteInventoryItem, deleteStockEntry, updateStockEntry }: InventoryProps) {
@@ -23,7 +23,6 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
   const [isEditingItem, setIsEditingItem] = useState(false);
   const [isEditingStock, setIsEditingStock] = useState(false);
   const [editingStockData, setEditingStockData] = useState<{ id: string; type: 'IN' | 'OUT'; quantity: string; price: string; sellingPrice: string; date: string } | null>(null);
-  const [isEditingSellingPrice, setIsEditingSellingPrice] = useState(false);
   const [sellingPriceInput, setSellingPriceInput] = useState('');
 
   // Sync selectedItemId with items list (handle deletions or empty state)
@@ -131,7 +130,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
       type: entry.type as 'IN' | 'OUT',
       quantity: entry.qty.toString(),
       price: displayPrice.toString(),
-      sellingPrice: item?.sellingPrice?.toString() || '',
+      sellingPrice: entry.sellingPrice.toString(),
       date: entry.date
     });
     setIsEditingStock(true);
@@ -144,11 +143,12 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
     updateStockEntry(editingStockData.id, editingStockData.type, {
       quantity: parseFloat(editingStockData.quantity),
       price: parseFloat(editingStockData.price),
+      sellingPrice: parseFloat(editingStockData.sellingPrice),
       date: editingStockData.date
     });
 
-    // Also update item's selling price if provided (Global update)
-    if (currentItem) {
+    // Also update item's selling price if provided (Global update) for INCOMING stock
+    if (currentItem && editingStockData.type === 'IN') {
       const sPrice = editingStockData.sellingPrice ? parseFloat(editingStockData.sellingPrice) : undefined;
       if (sPrice !== currentItem.sellingPrice) {
         updateInventoryItem({
@@ -162,16 +162,6 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
     setEditingStockData(null);
   };
 
-  const handleSaveSellingPrice = () => {
-    if (!currentItem) return;
-    const sPrice = sellingPriceInput ? parseFloat(sellingPriceInput) : undefined;
-    updateInventoryItem({
-      ...currentItem,
-      sellingPrice: sPrice
-    });
-    setIsEditingSellingPrice(false);
-  };
-
   const itemBatches = batches.filter(b => b.itemId === selectedItemId);
   const itemStockOuts = stockOuts.filter(s => s.itemId === selectedItemId);
 
@@ -180,12 +170,13 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
 
   const stockCard = [
     ...itemBatches.map(b => {
+      const item = items.find(i => i.id === b.itemId);
       return { 
         date: b.date, 
         type: 'IN', 
         qty: b.quantity, 
         price: b.pricePerUnit, 
-        sellingPrice: currentItem?.sellingPrice || 0,
+        sellingPrice: (b as any).sellingPrice || item?.sellingPrice || 0,
         total: b.quantity * b.pricePerUnit, 
         id: b.id 
       };
@@ -193,8 +184,8 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
     ...itemStockOuts.map(s => {
       const linkedT = transactions.find(t => t.relatedId === s.id && t.relatedType === 'stockOut');
       const item = items.find(i => i.id === s.itemId);
-      // For Sales, display the actual selling price from the transaction if available, otherwise fallback to item's default selling price
-      const sPrice = linkedT ? linkedT.amount / s.quantity : (item?.sellingPrice || 0);
+      // Priority: 1. Record specific price, 2. Transaction derived price, 3. Item default price
+      const sPrice = (s as any).sellingPrice || (linkedT ? linkedT.amount / s.quantity : (item?.sellingPrice || 0));
       return { 
         date: s.date, 
         type: 'OUT', 
@@ -458,19 +449,23 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     />
                   </div>
                 </div>
-                {editingStockData.type === 'IN' && (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Default Harga Jual Satuan (Rp)</label>
-                    <input 
-                      type="number" 
-                      placeholder="Contoh: 120000" 
-                      value={editingStockData.sellingPrice} 
-                      onChange={e => setEditingStockData({...editingStockData, sellingPrice: e.target.value})} 
-                      className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1">* Memperbarui harga jual default untuk produk ini.</p>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
+                    {editingStockData.type === 'IN' ? 'Update Harga Jual (Batch Ini) (Rp)' : 'Harga Jual Satuan (Transaksi) (Rp)'}
+                  </label>
+                  <input 
+                    type="number" 
+                    placeholder="Contoh: 120000" 
+                    value={editingStockData.sellingPrice} 
+                    onChange={e => setEditingStockData({...editingStockData, sellingPrice: e.target.value})} 
+                    className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {editingStockData.type === 'IN' 
+                      ? '* Memperbarui harga jual default untuk batch ini dan sistem.' 
+                      : '* Memperbarui harga jual untuk transaksi penjualan ini.'}
+                  </p>
+                </div>
                 <div className="flex gap-3 pt-4">
                   <button type="button" onClick={() => setIsEditingStock(false)} className="flex-1 font-bold text-slate-400">Batal</button>
                   <button type="submit" className="flex-1 py-3 bg-brand-blue text-white rounded-xl font-bold shadow-lg shadow-brand-blue/10">Simpan Perubahan</button>
@@ -544,37 +539,10 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Harga Jual Satuan</p>
-                <div className="flex items-center justify-end gap-1">
-                  {isEditingSellingPrice ? (
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-xs font-bold text-slate-400">Rp</span>
-                      <input 
-                        type="number"
-                        value={sellingPriceInput}
-                        onChange={(e) => setSellingPriceInput(e.target.value)}
-                        onBlur={handleSaveSellingPrice}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveSellingPrice();
-                          if (e.key === 'Escape') setIsEditingSellingPrice(false);
-                        }}
-                        className="w-24 bg-white border border-brand-blue/30 rounded px-1.5 py-0.5 text-sm font-bold text-brand-blue outline-none focus:ring-2 focus:ring-brand-blue/10"
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <p className="font-bold text-sm text-brand-blue flex items-center justify-end gap-1 mt-1">
-                      Rp {(currentItem?.sellingPrice || 0).toLocaleString('id-ID')}
-                      <button 
-                        onClick={() => {
-                          setSellingPriceInput((currentItem?.sellingPrice || 0).toString());
-                          setIsEditingSellingPrice(true);
-                        }}
-                        className="p-1 hover:bg-brand-blue/5 rounded text-slate-300 hover:text-brand-blue transition-colors"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                    </p>
-                  )}
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  <p className="font-bold text-sm text-brand-blue">
+                    Rp {(currentItem?.sellingPrice || 0).toLocaleString('id-ID')}
+                  </p>
                 </div>
               </div>
               <div className="col-span-2 pt-2 border-t border-slate-50">
@@ -602,7 +570,9 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-[10px] font-bold ${entry.type === 'IN' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{entry.type === 'IN' ? 'Masuk' : 'Keluar'}</span></td>
                     <td className="px-6 py-4 text-right text-sm font-medium">{entry.qty}</td>
                     <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.price.toLocaleString('id-ID')}</td>
-                    <td className="px-6 py-4 text-right text-sm text-slate-500">Rp {entry.sellingPrice.toLocaleString('id-ID')}</td>
+                    <td className="px-6 py-4 text-right text-sm text-slate-500">
+                      Rp {entry.sellingPrice.toLocaleString('id-ID')}
+                    </td>
                     <td className="px-6 py-4 text-right font-bold text-sm text-slate-900">Rp {entry.total.toLocaleString('id-ID')}</td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">

@@ -12,8 +12,8 @@ interface TransactionsProps {
   addTransaction: (t: Transaction) => void;
   updateTransaction: (t: Transaction) => void;
   deleteTransaction: (id: string) => void;
-  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string }) => string | null;
-  onRemoveStock: (data: { itemId: string; quantity: number; date: string }) => string | null;
+  onAddStock: (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number }) => string | null;
+  onRemoveStock: (data: { itemId: string; quantity: number; date: string; sellingPrice?: number }) => string | null;
   addInventoryItem: (item: InventoryItem) => void;
 }
 
@@ -254,6 +254,8 @@ export default function Transactions({
       if (syncInventory && activeItems.length > 0) {
         const item = activeItems[0];
         const qty = parseFloat(item.quantity);
+        const masterItem = items.find(i => i.id === item.itemId);
+        // Expense: itemPrice is purchase cost. Income: itemPrice is selling price.
         const itemPrice = parseFloat(item.price) || (amountVal / activeItems.length / qty);
         
         if (formData.type === 'Expense') {
@@ -261,7 +263,8 @@ export default function Transactions({
             itemId: item.itemId,
             quantity: qty,
             price: itemPrice, 
-            date: formData.date
+            date: formData.date,
+            sellingPrice: masterItem?.sellingPrice
           });
           if (res) {
             relatedId = res;
@@ -271,7 +274,8 @@ export default function Transactions({
           const res = onRemoveStock({
             itemId: item.itemId,
             quantity: qty,
-            date: formData.date
+            date: formData.date,
+            sellingPrice: itemPrice
           });
           if (res) {
             relatedId = res;
@@ -285,11 +289,23 @@ export default function Transactions({
         // Handle additional items
         activeItems.slice(1).forEach(item => {
           const qty = parseFloat(item.quantity);
+          const masterItem = items.find(i => i.id === item.itemId);
           const iPrice = parseFloat(item.price) || (amountVal / activeItems.length / qty);
           if (formData.type === 'Expense') {
-            onAddStock({ itemId: item.itemId, quantity: qty, price: iPrice, date: formData.date });
+            onAddStock({ 
+              itemId: item.itemId, 
+              quantity: qty, 
+              price: iPrice, 
+              date: formData.date,
+              sellingPrice: masterItem?.sellingPrice
+            });
           } else {
-            onRemoveStock({ itemId: item.itemId, quantity: qty, date: formData.date });
+            onRemoveStock({ 
+              itemId: item.itemId, 
+              quantity: qty, 
+              date: formData.date,
+              sellingPrice: iPrice
+            });
           }
         });
       }
