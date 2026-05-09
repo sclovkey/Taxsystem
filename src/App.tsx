@@ -55,6 +55,10 @@ export default function App() {
   }, []);
 
   const onAddStock = (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number; existingId?: string }) => {
+    if (!data.itemId) {
+      console.error("onAddStock called without itemId");
+      return null;
+    }
     const id = data.existingId || 'b' + Date.now() + Math.random().toString(36).substr(2, 5);
     const newBatch: StockBatch = {
       id,
@@ -63,9 +67,12 @@ export default function App() {
       quantity: data.quantity,
       remainingQuantity: data.quantity,
       pricePerUnit: data.price,
-      sellingPrice: data.sellingPrice,
-      userId: '' // Handled by upsert
+      userId: user?.uid || ''
     };
+
+    if (data.sellingPrice !== undefined && data.sellingPrice !== null) {
+      newBatch.sellingPrice = data.sellingPrice;
+    }
 
     if (data.existingId) {
       const old = stockBatches.find(b => b.id === data.existingId);
@@ -83,6 +90,10 @@ export default function App() {
   };
 
   const onRemoveStock = (data: { itemId: string; quantity: number; date: string; sellingPrice?: number; existingId?: string }) => {
+    if (!data.itemId) {
+      console.error("onRemoveStock called without itemId");
+      return null;
+    }
     if (data.existingId) {
       const oldOut = stockOuts.find(so => so.id === data.existingId);
       if (oldOut) {
@@ -90,11 +101,12 @@ export default function App() {
            alert("Perubahan kuantitas penjualan lewat edit transaksi belum didukung penuh. Silakan hapus dan input ulang untuk hasil yang akurat.");
            return data.existingId;
          }
-         upsert('stockOuts', data.existingId, {
+         const updateData: any = {
            ...oldOut,
-           sellingPrice: data.sellingPrice,
            date: data.date
-         });
+         };
+         if (data.sellingPrice !== undefined) updateData.sellingPrice = data.sellingPrice;
+         upsert('stockOuts', data.existingId, updateData);
          return data.existingId;
       }
     }
@@ -125,15 +137,17 @@ export default function App() {
     }
 
     const stockOutId = 'so' + Date.now() + Math.random().toString(36).substr(2, 5);
-    upsert('stockOuts', stockOutId, {
+    const stockOutData: StockOut = {
       id: stockOutId,
       itemId: data.itemId,
       date: data.date,
       quantity: data.quantity,
       cogs: totalCOGS,
-      sellingPrice: data.sellingPrice,
-      userId: ''
-    });
+      userId: user?.uid || ''
+    };
+    if (data.sellingPrice !== undefined) stockOutData.sellingPrice = data.sellingPrice;
+    
+    upsert('stockOuts', stockOutId, stockOutData);
     return stockOutId;
   };
 
@@ -194,7 +208,16 @@ export default function App() {
     if (typeof window !== 'undefined' && !window.confirm("Hapus catatan perubahan modal ini?")) return;
     remove('equityRecords', id);
   };
-  const addInventoryItem = (item: InventoryItem) => upsert('inventoryItems', item.id, item);
+  const addInventoryItem = (item: InventoryItem) => {
+    // Check for duplicate name before adding (using trim and case-insensitive check)
+    const duplicate = inventoryItems.find(i => i.name.toLowerCase().trim() === item.name.toLowerCase().trim());
+    if (duplicate) {
+      console.warn("Duplicate item name detected:", item.name);
+      return duplicate.id; 
+    }
+    upsert('inventoryItems', item.id, item);
+    return item.id;
+  };
   const updateInventoryItem = (item: InventoryItem) => upsert('inventoryItems', item.id, item);
   const deleteInventoryItem = (id: string) => {
     const hasData = stockBatches.some(b => b.itemId === id) || stockOuts.some(so => so.itemId === id);
@@ -208,6 +231,55 @@ export default function App() {
     }
     remove('inventoryItems', id);
   };
+
+  // Logic to merge duplicate items if any was created accidentally
+  const [movingIds, setMovingIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (inventoryItems.length > 1) {
+      const nameMap = new Map<string, string>(); // name.toLowerCase -> firstId
+      const toMerge: { fromId: string, toId: string }[] = [];
+
+      inventoryItems.forEach(item => {
+        const lowerName = item.name.toLowerCase().trim();
+        if (nameMap.has(lowerName)) {
+          const firstId = nameMap.get(lowerName)!;
+          if (!movingIds.has(item.id)) {
+            toMerge.push({ fromId: item.id, toId: firstId });
+          }
+        } else {
+          nameMap.set(lowerName, item.id);
+        }
+      });
+
+      if (toMerge.length > 0) {
+        console.log("Merging duplicate items:", toMerge);
+        const newMoving = new Set(movingIds);
+        
+        toMerge.forEach(({ fromId, toId }) => {
+          newMoving.add(fromId);
+          
+          // Move batches
+          stockBatches.filter(b => b.itemId === fromId).forEach(b => {
+             upsert('stockBatches', b.id, { ...b, itemId: toId });
+          });
+          // Move stockouts
+          stockOuts.filter(so => so.itemId === fromId).forEach(so => {
+             upsert('stockOuts', so.id, { ...so, itemId: toId });
+          });
+          // Move transaction items
+          transactions.filter(t => t.items?.some(i => i.itemId === fromId)).forEach(t => {
+            const newItems = t.items?.map(i => i.itemId === fromId ? { ...i, itemId: toId } : i);
+            upsert('transactions', t.id, { ...t, items: newItems });
+          });
+          // Delete duplicate record
+          remove('inventoryItems', fromId);
+        });
+        
+        setMovingIds(newMoving);
+      }
+    }
+  }, [inventoryItems, stockBatches, stockOuts, transactions]);
   
   const updateStockEntry = (id: string, type: 'IN' | 'OUT', data: { quantity: number; price: number; sellingPrice?: number; date: string }) => {
     if (type === 'IN') {

@@ -102,7 +102,7 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidStockBatch(incoming()) && isValidId(id);
         allow update: if isOwner(userId) && isValidStockBatch(incoming()) && (
-           incoming().diff(existing()).affectedKeys().hasOnly(['remainingQuantity', 'sellingPrice'])
+           incoming().diff(existing()).affectedKeys().hasOnly(['remainingQuantity', 'sellingPrice', 'itemId'])
         );
         allow delete: if isOwner(userId);
       }
@@ -110,7 +110,7 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidStockOut(incoming()) && isValidId(id);
         allow update: if isOwner(userId) && isValidStockOut(incoming()) && (
-           incoming().diff(existing()).affectedKeys().hasOnly(['sellingPrice'])
+           incoming().diff(existing()).affectedKeys().hasOnly(['sellingPrice', 'itemId'])
         );
         allow delete: if isOwner(userId);
       }

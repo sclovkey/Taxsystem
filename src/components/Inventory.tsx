@@ -10,7 +10,7 @@ interface InventoryProps {
   transactions: Transaction[];
   onAddStock: (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number }) => string | null;
   onRemoveStock: (data: { itemId: string; quantity: number; date: string; sellingPrice?: number }) => string | null;
-  addInventoryItem: (item: InventoryItem) => void;
+  addInventoryItem: (item: InventoryItem) => string;
   updateInventoryItem: (item: InventoryItem) => void;
   deleteInventoryItem: (id: string) => void;
   deleteStockEntry: (id: string, type: 'IN' | 'OUT') => void;
@@ -66,8 +66,7 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
         unit: newItemForm.unit,
         sellingPrice: newItemForm.sellingPrice ? parseFloat(newItemForm.sellingPrice) : undefined
       };
-      addInventoryItem(newItem);
-      targetId = newItem.id;
+      targetId = addInventoryItem(newItem);
     } else {
       if (!targetId) return;
       // Update existing item's selling price if provided in this form

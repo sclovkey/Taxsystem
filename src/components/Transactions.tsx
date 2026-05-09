@@ -14,7 +14,7 @@ interface TransactionsProps {
   deleteTransaction: (id: string) => void;
   onAddStock: (data: { itemId: string; quantity: number; price: number; date: string; sellingPrice?: number; existingId?: string }) => string | null;
   onRemoveStock: (data: { itemId: string; quantity: number; date: string; sellingPrice?: number; existingId?: string }) => string | null;
-  addInventoryItem: (item: InventoryItem) => void;
+  addInventoryItem: (item: InventoryItem) => string;
 }
 
 export default function Transactions({ 
@@ -60,7 +60,7 @@ export default function Transactions({
     if (formData.category === 'Pembelian' || formData.category === 'Penjualan') {
       setSyncInventory(true);
     }
-  }, [formData.category]);
+  }, [formData.category, isAdding]); // Also check when starting an addition
 
   const [isAddingNewItem, setIsAddingNewItem] = useState(false);
   const [newItemFormData, setNewItemFormData] = useState({ name: '', unit: '' });
@@ -250,6 +250,15 @@ export default function Transactions({
         if (!isNaN(p)) itemObj.price = p;
         return itemObj;
       });
+    }
+
+    // Double check sync logic before final action
+    if (!editingId && (formData.category === 'Pembelian' || formData.category === 'Penjualan') && !syncInventory) {
+       if (window.confirm("Kategori ini biasanya terhubung ke Persediaan. Hubungkan sekarang?")) {
+         setSyncInventory(true);
+         setErrorMsg("Silakan centang 'Hubungkan ke Persediaan' dan lengkapi rincian barang.");
+         return;
+       }
     }
 
     if (editingId) {
@@ -481,8 +490,8 @@ export default function Transactions({
       unit: newItemFormData.unit
     };
     
-    addInventoryItem(newItem);
-    setSessionNewItems(prev => [...prev, newItem]);
+    const finalId = addInventoryItem(newItem);
+    setSessionNewItems(prev => [...prev, { ...newItem, id: finalId }]);
     
     // Automatically select the new item in the last row
     const updatedItems = [...selectedItems];
@@ -490,7 +499,7 @@ export default function Transactions({
     if (lastIdx >= 0) {
       updatedItems[lastIdx] = { 
         ...updatedItems[lastIdx], 
-        itemId: newItem.id
+        itemId: finalId
       };
       setSelectedItems(updatedItems);
       calculateTotalFromItems(updatedItems);
@@ -893,6 +902,18 @@ export default function Transactions({
                               </div>
                             );
                           })}
+                        </div>
+                      )}
+                      {t.relatedId && (
+                        <div className="mt-2 flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-sm shadow-green-500/50"></div>
+                          <span className="text-[9px] font-black text-green-600 uppercase tracking-tighter">Tersinkron ke Stok</span>
+                        </div>
+                      )}
+                      {!t.relatedId && (t.category === 'Pembelian' || t.category === 'Penjualan') && (
+                        <div className="mt-2 flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">BELUM TERHUBUNG KE STOK</span>
                         </div>
                       )}
                     </td>
