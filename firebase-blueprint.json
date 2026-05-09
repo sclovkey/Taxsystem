@@ -127,6 +127,18 @@
         "userId": { "type": "string" }
       },
       "required": ["id", "date", "description", "amount", "type", "userId"]
+    },
+    "MonthlyOpeningBalance": {
+      "title": "Monthly Opening Balance",
+      "description": "Opening balance for a specific month",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "month": { "type": "string" },
+        "amount": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "month", "amount", "userId"]
     }
   },
   "firestore": {
@@ -165,6 +177,10 @@
     "users/{userId}/equityRecords/{recordId}": {
       "schema": "EquityRecord",
       "description": "User equity records"
+    },
+    "users/{userId}/monthlyOpeningBalances/{balanceId}": {
+      "schema": "MonthlyOpeningBalance",
+      "description": "User monthly opening balances"
     }
   }
 }

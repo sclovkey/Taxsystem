@@ -15,6 +15,7 @@ import EquityReport from './components/EquityReport';
 import TaxReport from './components/TaxReport';
 import Liabilities from './components/Liabilities';
 import Suppliers from './components/Suppliers';
+import Cash from './components/Cash';
 import Login from './components/Login';
 import { AnimatePresence, motion } from 'motion/react';
 import { Menu, X, Loader2 } from 'lucide-react';
@@ -39,6 +40,7 @@ export default function App() {
     customers,
     liabilities,
     equityRecords,
+    monthlyOpeningBalances,
     loading: dataLoading,
     upsert,
     remove
@@ -300,6 +302,15 @@ export default function App() {
           onAddStock={onAddStock}
           onRemoveStock={onRemoveStock}
           addInventoryItem={addInventoryItem}
+        />;
+      case 'cash':
+        return <Cash 
+          transactions={transactions} 
+          monthlyOpeningBalances={monthlyOpeningBalances}
+          onSaveOpeningBalance={(month, amount) => {
+            const id = `ob_${month}`;
+            upsert('monthlyOpeningBalances', id, { id, month, amount });
+          }}
         />;
       case 'inventory':
         return <Inventory 

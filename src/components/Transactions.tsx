@@ -55,12 +55,29 @@ export default function Transactions({
 
   const [syncInventory, setSyncInventory] = useState(false);
   const [isAddingNewItem, setIsAddingNewItem] = useState(false);
-  const [newItemFormData, setNewItemFormData] = useState({ name: '', unit: '', sellingPrice: '' });
+  const [newItemFormData, setNewItemFormData] = useState({ name: '', unit: '' });
+  const [sessionNewItems, setSessionNewItems] = useState<InventoryItem[]>([]);
+  
+  // Combine items prop with newly added items in this session for immediate UI feedback
+  const allItems = [...items, ...sessionNewItems];
+
   const [selectedItems, setSelectedItems] = useState<{ itemId: string; quantity: string; price: string }[]>([
     { itemId: items[0]?.id || '', quantity: '', price: '' }
   ]);
 
   const filteredTransactions = transactions.filter(t => t.date.startsWith(selectedMonth));
+  
+  // Refresh prices if items master data changes significantly
+  React.useEffect(() => {
+    if (selectedItems.some(i => i.itemId) && allItems.length > 0) {
+      const updated = refreshPrices(formData.type, selectedItems);
+      // Only update if something actually changed to avoid infinite loops
+      if (JSON.stringify(updated) !== JSON.stringify(selectedItems)) {
+        setSelectedItems(updated);
+        calculateTotalFromItems(updated);
+      }
+    }
+  }, [items, sessionNewItems, formData.type]);
 
   const addItemRow = () => {
     setSelectedItems([...selectedItems, { itemId: items[0]?.id || '', quantity: '', price: '' }]);
@@ -78,20 +95,19 @@ export default function Transactions({
       const p = parseFloat(curr.price) || 0;
       return acc + (q * p);
     }, 0);
-    if (total > 0) {
-      setFormData(prev => ({ ...prev, amount: total.toString() }));
-    }
+    
+    setFormData(prev => ({ ...prev, amount: total.toString() }));
   };
 
   const calculateSuggestedPrice = (itemId: string, quantity: number, type: 'Income' | 'Expense') => {
     if (!itemId) return '';
 
-    const item = items.find(i => i.id === itemId);
+    const item = allItems.find(i => i.id === itemId);
     if (!item) return '';
 
     if (type === 'Income') {
       // Suggest default selling price from inventory for Sales
-      return item.sellingPrice?.toString() || '';
+      return item.sellingPrice !== undefined ? item.sellingPrice.toString() : '';
     } else {
       // Latest Purchase Price for Purchases
       const itemBatches = batches
@@ -105,6 +121,15 @@ export default function Transactions({
     }
 
     return '';
+  };
+
+  const refreshPrices = (type: 'Income' | 'Expense', itemList: typeof selectedItems) => {
+    return itemList.map(item => {
+      const suggested = calculateSuggestedPrice(item.itemId, parseFloat(item.quantity) || 0, type);
+      // When switching types, we strictly use the suggestion (even if empty) 
+      // because Selling Price and Purchase Price are logically different.
+      return { ...item, price: suggested };
+    });
   };
 
   const calculateHPP = (itemId: string, quantity: number) => {
@@ -136,7 +161,7 @@ export default function Transactions({
     if (activeItems.length === 0) return '';
 
     const details = activeItems.map(ai => {
-      const item = items.find(i => i.id === ai.itemId);
+      const item = allItems.find(i => i.id === ai.itemId);
       return `${ai.quantity} ${item?.unit || ''} ${item?.name || 'Barang'}`;
     });
 
@@ -148,13 +173,12 @@ export default function Transactions({
     const newItems = [...selectedItems];
     let updatedPrice = newItems[index].price;
     
-    // Auto-calculate suggested price when item or quantity changes
-    if (field === 'itemId' || field === 'quantity') {
-      const itemId = field === 'itemId' ? value : newItems[index].itemId;
-      const quantity = field === 'quantity' ? parseFloat(value) : parseFloat(newItems[index].quantity);
-      
-      const suggested = calculateSuggestedPrice(itemId, quantity, formData.type);
-      if (suggested) {
+    // Auto-calculate suggested price when item changes (always) or quantity changes (if suggestion exists)
+    if (field === 'itemId') {
+      updatedPrice = calculateSuggestedPrice(value, parseFloat(newItems[index].quantity) || 0, formData.type);
+    } else if (field === 'quantity') {
+      const suggested = calculateSuggestedPrice(newItems[index].itemId, parseFloat(value) || 0, formData.type);
+      if (suggested !== '') {
         updatedPrice = suggested;
       }
     }
@@ -175,7 +199,7 @@ export default function Transactions({
       }));
     }
 
-    if (field === 'quantity' || field === 'price') {
+    if (field === 'quantity' || field === 'price' || field === 'itemId') {
       calculateTotalFromItems(newItems);
     }
   };
@@ -328,21 +352,35 @@ export default function Transactions({
     const newItem: InventoryItem = {
       id: 'i' + Math.random().toString(36).substr(2, 5),
       name: newItemFormData.name,
-      unit: newItemFormData.unit,
-      sellingPrice: newItemFormData.sellingPrice ? parseFloat(newItemFormData.sellingPrice) : undefined
+      unit: newItemFormData.unit
     };
     
     addInventoryItem(newItem);
-    setNewItemFormData({ name: '', unit: '', sellingPrice: '' });
-    setIsAddingNewItem(false);
+    setSessionNewItems(prev => [...prev, newItem]);
     
-    // Automatically select the new item in the last row if it's currently empty
+    // Automatically select the new item in the last row
     const updatedItems = [...selectedItems];
-    const lastItem = updatedItems[updatedItems.length - 1];
-    if (lastItem && !lastItem.itemId) {
-      updatedItems[updatedItems.length - 1] = { ...lastItem, itemId: newItem.id };
+    const lastIdx = updatedItems.length - 1;
+    if (lastIdx >= 0) {
+      updatedItems[lastIdx] = { 
+        ...updatedItems[lastIdx], 
+        itemId: newItem.id
+      };
       setSelectedItems(updatedItems);
+      calculateTotalFromItems(updatedItems);
+
+      // Update description specifically since generateDescription now sees the new item
+      const currentAutoDesc = generateDescription(selectedItems, formData.type);
+      if (!formData.description || formData.description === currentAutoDesc) {
+        setFormData(prev => ({
+          ...prev,
+          description: generateDescription(updatedItems, prev.type)
+        }));
+      }
     }
+    
+    setNewItemFormData({ name: '', unit: '' });
+    setIsAddingNewItem(false);
   };
 
   return (
@@ -413,8 +451,8 @@ export default function Transactions({
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
                 {formData.category === 'Penjualan' 
-                  ? (selectedItems.length === 1 && selectedItems[0].itemId && items.find(i => i.id === selectedItems[0].itemId)?.sellingPrice
-                      ? `Total Penjualan (@ Rp ${items.find(i => i.id === selectedItems[0].itemId)!.sellingPrice!.toLocaleString('id-ID')} / ${items.find(i => i.id === selectedItems[0].itemId)!.unit})`
+                  ? (selectedItems.length === 1 && selectedItems[0].itemId && allItems.find(i => i.id === selectedItems[0].itemId)?.sellingPrice
+                      ? `Total Penjualan (@ Rp ${allItems.find(i => i.id === selectedItems[0].itemId)!.sellingPrice!.toLocaleString('id-ID')} / ${allItems.find(i => i.id === selectedItems[0].itemId)!.unit})`
                       : 'Total Harga Jual (Terhitung Otomatis)')
                   : formData.category === 'Pembelian' ? 'Total Harga Beli' : 'Jumlah (Rp)'}
               </label>
@@ -446,10 +484,14 @@ export default function Transactions({
                   const currentAutoDesc = generateDescription(selectedItems, formData.type);
                   const isAutoDesc = !formData.description || formData.description === currentAutoDesc;
                   
+                  const updatedItems = refreshPrices(newType, selectedItems);
+                  setSelectedItems(updatedItems);
+                  calculateTotalFromItems(updatedItems);
+                  
                   setFormData(prev => ({
                     ...prev, 
                     type: newType,
-                    description: isAutoDesc ? generateDescription(selectedItems, newType) : prev.description
+                    description: isAutoDesc ? generateDescription(updatedItems, newType) : prev.description
                   }));
                 }}
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
@@ -471,11 +513,17 @@ export default function Transactions({
                   if (val === 'Penjualan') targetType = 'Income';
                   if (val === 'Pembelian') targetType = 'Expense';
 
-                  setFormData({
-                    ...formData, 
+                  if (targetType !== formData.type) {
+                    const updatedItems = refreshPrices(targetType, selectedItems);
+                    setSelectedItems(updatedItems);
+                    calculateTotalFromItems(updatedItems);
+                  }
+
+                  setFormData(prev => ({
+                    ...prev, 
                     category: val,
                     type: targetType
-                  });
+                  }));
                   
                   if (isSyncable) {
                     setSyncInventory(true);
@@ -586,19 +634,12 @@ export default function Transactions({
                               value={newItemFormData.unit}
                               onChange={e => setNewItemFormData({...newItemFormData, unit: e.target.value})}
                               placeholder="cup, kg, Liter"
-                              className="w-20 bg-white border border-slate-100 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-brand-blue/10"
-                            />
-                            <input 
-                              type="number"
-                              value={newItemFormData.sellingPrice}
-                              onChange={e => setNewItemFormData({...newItemFormData, sellingPrice: e.target.value})}
-                              placeholder="Harga Jual"
                               className="flex-1 bg-white border border-slate-100 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-brand-blue/10"
                             />
                             <button 
                               type="button"
                               onClick={handleAddNewItem}
-                              className="bg-brand-blue text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm"
+                              className="bg-brand-blue text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm"
                             >
                               Tambah
                             </button>
@@ -624,7 +665,7 @@ export default function Transactions({
                           className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-brand-blue/10 outline-none appearance-none font-bold"
                         >
                           <option value="">-- Pilih Barang --</option>
-                          {items.map(item => (
+                          {allItems.map(item => (
                             <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>
                           ))}
                           <option value="NEW" className="font-bold text-indigo-600">+ Tambah Barang Baru</option>
@@ -708,7 +749,7 @@ export default function Transactions({
                       {t.items && t.items.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {t.items.map((item, idx) => {
-                            const itemName = items.find(i => i.id === item.itemId)?.name || 'Barang';
+                            const itemName = allItems.find(i => i.id === item.itemId)?.name || 'Barang';
                             return (
                               <div key={idx} className="flex flex-col bg-slate-50 border border-slate-100 rounded-lg px-2 py-1">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{itemName}</span>

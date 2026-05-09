@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from './firebase';
-import { Transaction, InventoryItem, StockBatch, StockOut, Asset, Supplier, Customer, Liability, EquityRecord } from '../types';
+import { Transaction, InventoryItem, StockBatch, StockOut, Asset, Supplier, Customer, Liability, EquityRecord, MonthlyOpeningBalance } from '../types';
 
 export function useFirebaseSync(user: User | null) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -24,6 +24,7 @@ export function useFirebaseSync(user: User | null) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
   const [equityRecords, setEquityRecords] = useState<EquityRecord[]>([]);
+  const [monthlyOpeningBalances, setMonthlyOpeningBalances] = useState<MonthlyOpeningBalance[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export function useFirebaseSync(user: User | null) {
       setCustomers([]);
       setLiabilities([]);
       setEquityRecords([]);
+      setMonthlyOpeningBalances([]);
       setLoading(false);
       return;
     }
@@ -45,7 +47,7 @@ export function useFirebaseSync(user: User | null) {
     const unsubscritbers: (() => void)[] = [];
 
     let loadedCounts = 0;
-    const TOTAL_COLLECTIONS = 9;
+    const TOTAL_COLLECTIONS = 10;
     const checkLoaded = () => {
       loadedCounts++;
       if (loadedCounts >= TOTAL_COLLECTIONS) {
@@ -92,6 +94,7 @@ export function useFirebaseSync(user: User | null) {
     syncCollection('customers', setCustomers, 'name');
     syncCollection('liabilities', setLiabilities);
     syncCollection('equityRecords', setEquityRecords);
+    syncCollection('monthlyOpeningBalances', setMonthlyOpeningBalances, 'month');
 
     return () => unsubscritbers.forEach(unsub => unsub());
   }, [user]);
@@ -126,6 +129,7 @@ export function useFirebaseSync(user: User | null) {
     customers,
     liabilities,
     equityRecords,
+    monthlyOpeningBalances,
     loading,
     upsert,
     remove,

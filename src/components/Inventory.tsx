@@ -23,6 +23,8 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
   const [isEditingItem, setIsEditingItem] = useState(false);
   const [isEditingStock, setIsEditingStock] = useState(false);
   const [editingStockData, setEditingStockData] = useState<{ id: string; type: 'IN' | 'OUT'; quantity: string; price: string; sellingPrice: string; date: string } | null>(null);
+  const [isEditingSellingPrice, setIsEditingSellingPrice] = useState(false);
+  const [sellingPriceInput, setSellingPriceInput] = useState('');
 
   // Sync selectedItemId with items list (handle deletions or empty state)
   React.useEffect(() => {
@@ -158,6 +160,16 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
 
     setIsEditingStock(false);
     setEditingStockData(null);
+  };
+
+  const handleSaveSellingPrice = () => {
+    if (!currentItem) return;
+    const sPrice = sellingPriceInput ? parseFloat(sellingPriceInput) : undefined;
+    updateInventoryItem({
+      ...currentItem,
+      sellingPrice: sPrice
+    });
+    setIsEditingSellingPrice(false);
   };
 
   const itemBatches = batches.filter(b => b.itemId === selectedItemId);
@@ -532,15 +544,38 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Harga Jual Satuan</p>
-                <p className="font-bold text-sm text-brand-blue flex items-center justify-end gap-1">
-                  Rp {(currentItem?.sellingPrice || 0).toLocaleString('id-ID')}
-                  <button 
-                    onClick={() => startEditing(currentItem!)}
-                    className="p-1 hover:bg-brand-blue/5 rounded text-slate-300 hover:text-brand-blue transition-colors"
-                  >
-                    <Pencil size={12} />
-                  </button>
-                </p>
+                <div className="flex items-center justify-end gap-1">
+                  {isEditingSellingPrice ? (
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-xs font-bold text-slate-400">Rp</span>
+                      <input 
+                        type="number"
+                        value={sellingPriceInput}
+                        onChange={(e) => setSellingPriceInput(e.target.value)}
+                        onBlur={handleSaveSellingPrice}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveSellingPrice();
+                          if (e.key === 'Escape') setIsEditingSellingPrice(false);
+                        }}
+                        className="w-24 bg-white border border-brand-blue/30 rounded px-1.5 py-0.5 text-sm font-bold text-brand-blue outline-none focus:ring-2 focus:ring-brand-blue/10"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <p className="font-bold text-sm text-brand-blue flex items-center justify-end gap-1 mt-1">
+                      Rp {(currentItem?.sellingPrice || 0).toLocaleString('id-ID')}
+                      <button 
+                        onClick={() => {
+                          setSellingPriceInput((currentItem?.sellingPrice || 0).toString());
+                          setIsEditingSellingPrice(true);
+                        }}
+                        className="p-1 hover:bg-brand-blue/5 rounded text-slate-300 hover:text-brand-blue transition-colors"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="col-span-2 pt-2 border-t border-slate-50">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Total Nilai Stok</p>

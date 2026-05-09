@@ -77,6 +77,12 @@ export interface EquityRecord {
   type: 'Initial' | 'Addition' | 'Withdrawal' | 'ProfitDist';
 }
 
+export interface MonthlyOpeningBalance {
+  id: string;
+  month: string; // YYYY-MM
+  amount: number;
+}
+
 export interface ChatMessage {
   role: 'user' | 'model';
   content: string;

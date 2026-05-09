@@ -14,7 +14,8 @@ import {
   ClipboardList,
   FileText,
   Calculator,
-  LogOut
+  LogOut,
+  Banknote
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { logout } from '../lib/firebase';
@@ -30,6 +31,7 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }: 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Beranda' },
     { id: 'transactions', icon: ArrowUpRight, label: 'Transaksi' },
+    { id: 'cash', icon: Banknote, label: 'Kas' },
     { id: 'inventory', icon: Package, label: 'Persediaan' },
     { id: 'assets', icon: Shield, label: 'Aktiva Tetap' },
     { id: 'liabilities', icon: Wallet, label: 'Daftar Utang' },

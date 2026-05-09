@@ -72,6 +72,12 @@ service cloud.firestore {
              data.userId == request.auth.uid;
     }
 
+    function isValidMonthlyOpeningBalance(data) {
+      return data.keys().hasAll(['id', 'month', 'amount', 'userId']) &&
+             data.month is string && data.amount is number &&
+             data.userId == request.auth.uid;
+    }
+
     match /users/{userId} {
       match /transactions/{id} {
         allow read: if isOwner(userId);
@@ -133,6 +139,12 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidEquityRecord(incoming()) && isValidId(id);
         allow update: if isOwner(userId) && isValidEquityRecord(incoming());
+        allow delete: if isOwner(userId);
+      }
+      match /monthlyOpeningBalances/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidMonthlyOpeningBalance(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidMonthlyOpeningBalance(incoming());
         allow delete: if isOwner(userId);
       }
     }
