@@ -160,7 +160,7 @@ export default function App() {
   };
 
   const totalIncome = transactions
-    .filter(t => t.type === 'Income' || t.category === 'Penjualan')
+    .filter(t => (t.type === 'Income' && t.category !== 'Beban' && t.category !== 'Pembelian' && t.category !== 'Aset') || t.category === 'Penjualan')
     .reduce((acc, t) => acc + t.amount, 0);
 
   const totalHPP = transactions.reduce((acc, t) => {
@@ -565,7 +565,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans relative">
+    <div className="flex h-screen bg-coffee-bg text-slate-900 overflow-hidden font-sans relative">
       {/* Menu Button - Visible when sidebar is closed */}
       <motion.button 
         initial={false}
@@ -578,7 +578,7 @@ export default function App() {
       >
         <Menu size={24} className="group-hover:scale-110 transition-transform" />
       </motion.button>
-
+ 
       {/* Sidebar with mobile drawer support */}
       <Sidebar 
         activeTab={activeTab} 
@@ -596,7 +596,7 @@ export default function App() {
           marginLeft: (isDesktop && isSidebarOpen) ? 256 : 0,
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="flex-1 h-screen overflow-y-auto bg-slate-50/50 p-4 md:p-8 pt-16 lg:pt-8"
+        className="flex-1 h-screen overflow-y-auto bg-coffee-bg/40 p-4 md:p-8 pt-16 lg:pt-8"
       >
         <div className="max-w-6xl mx-auto h-full px-2 md:px-0">
           {dataLoading ? (

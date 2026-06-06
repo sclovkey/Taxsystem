@@ -7,15 +7,42 @@
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-brand-blue: #1e3a8a; /* Navy Blue 900 */
-  --color-brand-blue-light: #e0f2fe; /* Sky 100 */
-  --color-brand-yellow: #facc15; /* Yellow 400 */
-  --color-brand-yellow-dark: #eab308; /* Yellow 500 */
+  /* Custom Coffee Brown Palette */
+  --color-brand-blue: #3e2723; /* Rich dark roasted coffee bean brown */
+  --color-brand-blue-light: #efebe9; /* Creamy beige latte froth */
+  --color-brand-yellow: #dfb28e; /* Soft toasted caramel/milk */
+  --color-brand-yellow-dark: #8d6e63; /* Warm medium-roast brown */
+  --color-coffee-bg: #e6ded8; /* Beautiful soft light coffee brown / latte cream background */
+
+  /* Override Indigo colors with Coffee Brown tones so every main button, modal, badge, and interaction is beautiful coffee-themed */
+  --color-indigo-50: #efebe9;
+  --color-indigo-100: #d7ccc8;
+  --color-indigo-200: #bcaaa4;
+  --color-indigo-300: #a1887f;
+  --color-indigo-400: #8d6e63;
+  --color-indigo-500: #795548;
+  --color-indigo-600: #6d4c41;
+  --color-indigo-700: #5d4037;
+  --color-indigo-800: #4e342e;
+  --color-indigo-900: #3e2723;
+
+  /* Re-define Slate shades to give a modern, clean, high-contrast gray baseline */
+  --color-slate-50: #f5f5f5;   /* Nice pale gray */
+  --color-slate-100: #e5e5e5;  /* Subtle gray border */
+  --color-slate-200: #d4d4d4;
+  --color-slate-350: #a3a3a3;
+  --color-slate-400: #737373;
+  --color-slate-500: #525252;
+  --color-slate-655: #404040;
+  --color-slate-600: #3f3f46;
+  --color-slate-700: #27272a;
+  --color-slate-800: #18181b;
+  --color-slate-900: #0a0a0a;  /* Deep charcoal background elements */
 }
 
 @layer base {
   body {
-    @apply antialiased text-slate-900 bg-slate-50;
+    @apply antialiased text-slate-900 bg-coffee-bg; /* Elegant light-brown coffee-cream background to make white cards pop beautifully */
   }
 }
 

@@ -16,7 +16,7 @@ export default function Reports({ transactions, stockOuts }: ReportsProps) {
   const filteredTransactions = transactions.filter(t => t.date.startsWith(selectedMonth));
   
   // Income (Revenue)
-  const incomeTransactions = filteredTransactions.filter(t => t.type === 'Income' || t.category === 'Penjualan');
+  const incomeTransactions = filteredTransactions.filter(t => (t.type === 'Income' && t.category !== 'Beban' && t.category !== 'Pembelian' && t.category !== 'Aset') || t.category === 'Penjualan');
   const incomeTotal = incomeTransactions.reduce((acc, t) => acc + t.amount, 0);
 
   // HPP (Cost of Goods Sold)

@@ -24,11 +24,11 @@ export default function BalanceSheet({
   const currentOpeningBalance = monthlyOpeningBalances.find(b => b.month === currentMonth)?.amount || 0;
   
   const monthIncoming = transactions
-    .filter(t => t.date.startsWith(currentMonth) && t.type === 'Income')
+    .filter(t => t.date.startsWith(currentMonth) && t.type === 'Income' && t.category !== 'Beban' && t.category !== 'Pembelian' && t.category !== 'Aset')
     .reduce((acc, t) => acc + t.amount, 0);
 
   const monthOutgoing = transactions
-    .filter(t => t.date.startsWith(currentMonth) && t.type === 'Expense')
+    .filter(t => t.date.startsWith(currentMonth) && (t.type === 'Expense' || t.category === 'Beban' || t.category === 'Pembelian' || t.category === 'Aset'))
     .reduce((acc, t) => acc + t.amount, 0);
 
   const cash = currentOpeningBalance + monthIncoming - monthOutgoing;

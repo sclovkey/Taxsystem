@@ -10,7 +10,7 @@ interface DashboardProps {
 
 export default function Workspace({ transactions, setActiveTab, stockOuts }: DashboardProps) {
   const income = transactions
-    .filter(t => t.type === 'Income' || t.category === 'Penjualan')
+    .filter(t => (t.type === 'Income' && t.category !== 'Beban' && t.category !== 'Pembelian' && t.category !== 'Aset') || t.category === 'Penjualan')
     .reduce((acc, t) => acc + t.amount, 0);
     
   const hpp = transactions.reduce((acc, t) => {

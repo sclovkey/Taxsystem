@@ -35,7 +35,6 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, setIsOpen }: 
     { id: 'cash', icon: Banknote, label: 'Kas' },
     { id: 'inventory', icon: Package, label: 'Persediaan' },
     { id: 'assets', icon: Shield, label: 'Aktiva Tetap' },
-    { id: 'liabilities', icon: Wallet, label: 'Daftar Utang' },
     { id: 'suppliers', icon: Truck, label: 'Daftar Supplier' },
     { id: 'reports', icon: BarChart3, label: 'Laba Rugi' },
     { id: 'balance-sheet', icon: ClipboardList, label: 'Neraca' },
