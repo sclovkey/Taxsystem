@@ -815,7 +815,7 @@ export default function Transactions({
                   )}
                   
                   {selectedItems.map((selected, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                       <div className="md:col-span-4">
                         <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-tighter">Nama Barang</label>
                         <select 
@@ -872,7 +872,7 @@ export default function Transactions({
                       </div>
                       
                       {formData.type === 'Income' && (
-                        <div className="md:col-span-2 bg-slate-100/50 p-2 rounded-lg border border-slate-100">
+                        <div className="md:col-span-2 bg-slate-100/50 p-2 rounded-lg border border-slate-100 md:self-center">
                           <label className="block text-[8px] font-black text-slate-400 uppercase mb-0.5 tracking-tighter">HPP (Otomatis)</label>
                           <div className="text-xs font-bold text-slate-500">
                             Rp {calculateHPP(selected.itemId, parseFloat(selected.quantity) || 0).toLocaleString('id-ID')}
@@ -880,7 +880,7 @@ export default function Transactions({
                         </div>
                       )}
 
-                      <div className={`md:col-span-1 flex justify-end ${formData.type !== 'Income' ? 'md:col-span-3' : ''}`}>
+                      <div className={`md:col-span-1 flex justify-end md:self-center ${formData.type !== 'Income' ? 'md:col-span-3' : ''}`}>
                         {selectedItems.length > 1 && (
                           <button 
                             type="button"

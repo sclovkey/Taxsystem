@@ -180,13 +180,67 @@ export default function App() {
 
   const currentProfit = totalIncome - totalHPP - totalBeban;
 
-  const addTransaction = (t: Transaction) => upsert('transactions', t.id, t);
-  const updateTransaction = (t: Transaction) => upsert('transactions', t.id, t);
+  const addTransaction = (t: Transaction) => {
+    let finalTx = { ...t };
+    if (t.type === 'Expense' && t.category === 'Aset') {
+      const assetId = 'as' + Date.now() + Math.random().toString(36).substr(2, 5);
+      const newAsset: Asset = {
+        id: assetId,
+        name: t.description,
+        purchaseDate: t.date,
+        cost: t.amount,
+        usefulLifePoints: 4,
+        salvageValue: 0
+      };
+      upsert('assets', assetId, newAsset);
+      finalTx.relatedId = assetId;
+      finalTx.relatedType = 'asset';
+    }
+    upsert('transactions', finalTx.id, finalTx);
+  };
+
+  const updateTransaction = (t: Transaction) => {
+    let finalTx = { ...t };
+    if (t.type === 'Expense' && t.category === 'Aset') {
+      if (t.relatedType === 'asset' && t.relatedId) {
+        const existingAsset = assets.find(a => a.id === t.relatedId);
+        const updatedAsset: Asset = {
+          id: t.relatedId,
+          name: t.description,
+          purchaseDate: t.date,
+          cost: t.amount,
+          usefulLifePoints: existingAsset?.usefulLifePoints ?? 4,
+          salvageValue: existingAsset?.salvageValue ?? 0
+        };
+        upsert('assets', t.relatedId, updatedAsset);
+      } else {
+        const assetId = 'as' + Date.now() + Math.random().toString(36).substr(2, 5);
+        const newAsset: Asset = {
+          id: assetId,
+          name: t.description,
+          purchaseDate: t.date,
+          cost: t.amount,
+          usefulLifePoints: 4,
+          salvageValue: 0
+        };
+        upsert('assets', assetId, newAsset);
+        finalTx.relatedId = assetId;
+        finalTx.relatedType = 'asset';
+      }
+    } else {
+      if (t.relatedType === 'asset' && t.relatedId) {
+        remove('assets', t.relatedId);
+        delete finalTx.relatedId;
+        delete finalTx.relatedType;
+      }
+    }
+    upsert('transactions', finalTx.id, finalTx);
+  };
+
   const deleteTransaction = (id: string) => {
     const t = transactions.find(item => item.id === id);
     if (t?.relatedId && t.relatedType) {
       if (t.relatedType === 'stockBatch') {
-        // If it's a purchase, check if any of it was consumed
         const batch = stockBatches.find(b => b.id === t.relatedId);
         if (batch && batch.remainingQuantity < batch.quantity) {
           if (typeof window !== 'undefined' && !window.confirm("Sebagian stok ini sudah terjual/keluar. Menghapus transaksi ini akan menyebabkan ketidaksesuaian stok. Lanjutkan?")) {
@@ -195,11 +249,8 @@ export default function App() {
         }
         remove('stockBatches', t.relatedId);
       } else if (t.relatedType === 'stockOut') {
-        // If it's a sale, we should ideally restore the stock
         const sOut = stockOuts.find(so => so.id === t.relatedId);
         if (sOut) {
-          // Restore inventory (simplified undo FIFO)
-          // We look for batches of the same item and add back quantity to the latest ones first (inverse FIFO)
           let toRestore = sOut.quantity;
           const targetBatches = [...stockBatches]
             .filter(b => b.itemId === sOut.itemId)
@@ -217,12 +268,26 @@ export default function App() {
           }
           remove('stockOuts', t.relatedId);
         }
+      } else if (t.relatedType === 'asset') {
+        remove('assets', t.relatedId);
       }
     }
     remove('transactions', id);
   };
   
   const addAsset = (a: Asset) => upsert('assets', a.id, a);
+  const updateAsset = (a: Asset) => upsert('assets', a.id, a);
+  const deleteAsset = (id: string) => {
+    if (typeof window !== 'undefined' && !window.confirm("Hapus data aset/aktiva tetap ini?")) return;
+    const linkedTx = transactions.find(t => t.relatedId === id && t.relatedType === 'asset');
+    if (linkedTx) {
+      const updatedTx = { ...linkedTx };
+      delete updatedTx.relatedId;
+      delete updatedTx.relatedType;
+      upsert('transactions', linkedTx.id, updatedTx);
+    }
+    remove('assets', id);
+  };
   const addSupplier = (s: Supplier) => upsert('suppliers', s.id, s);
   const deleteSupplier = (id: string) => {
     if (typeof window !== 'undefined' && !window.confirm("Hapus data supplier ini?")) return;
@@ -451,7 +516,7 @@ export default function App() {
           updateStockEntry={updateStockEntry}
         />;
       case 'assets':
-        return <Assets assets={assets} addAsset={addAsset} />;
+        return <Assets assets={assets} addAsset={addAsset} updateAsset={updateAsset} deleteAsset={deleteAsset} />;
       case 'liabilities':
         return <Liabilities 
           liabilities={liabilities} 
