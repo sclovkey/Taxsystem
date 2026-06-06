@@ -107,6 +107,24 @@ export default function Transactions({
     setFormData(prev => ({ ...prev, amount: total.toString() }));
   };
 
+  const getAvailableStock = (itemId: string) => {
+    if (!itemId) return 0;
+    let available = batches
+      .filter(b => b.itemId === itemId)
+      .reduce((sum, b) => sum + b.remainingQuantity, 0);
+    
+    if (editingId) {
+      const oldTx = transactions.find(t => t.id === editingId);
+      if (oldTx && oldTx.items) {
+        const oldCtxItem = oldTx.items.find(i => i.itemId === itemId);
+        if (oldCtxItem) {
+          available += oldCtxItem.quantity;
+        }
+      }
+    }
+    return available;
+  };
+
   const calculateSuggestedPrice = (itemId: string, quantity: number, type: 'Income' | 'Expense') => {
     if (!itemId) return '';
 
@@ -230,6 +248,18 @@ export default function Transactions({
     const activeItems = syncInventory 
       ? selectedItems.filter(item => item.itemId && !isNaN(parseFloat(item.quantity)) && parseFloat(item.quantity) > 0) 
       : [];
+
+    if (formData.type === 'Income' && syncInventory && activeItems.length > 0) {
+      for (const item of activeItems) {
+        const available = getAvailableStock(item.itemId);
+        const qtyVal = parseFloat(item.quantity);
+        if (qtyVal > available) {
+          const masterItem = allItems.find(i => i.id === item.itemId);
+          setErrorMsg(`Jumlah penjualan untuk ${masterItem?.name || 'barang'} melebihi persediaan (Maksimal: ${available} ${masterItem?.unit || ''}).`);
+          return;
+        }
+      }
+    }
 
     const transactionData: any = {
       id: editingId || Math.random().toString(36).substr(2, 9),
@@ -815,6 +845,18 @@ export default function Transactions({
                           className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-blue/10 outline-none font-bold"
                           placeholder="0"
                         />
+                        {formData.type === 'Income' && selected.itemId && (
+                          <div className={`text-[9px] mt-1 font-bold ${
+                            parseFloat(selected.quantity) > getAvailableStock(selected.itemId) 
+                            ? 'text-red-500 animate-pulse' 
+                            : 'text-slate-400'
+                          }`}>
+                            {parseFloat(selected.quantity) > getAvailableStock(selected.itemId)
+                              ? `Maksimal: ${getAvailableStock(selected.itemId)}`
+                              : `Stok: ${getAvailableStock(selected.itemId)}`
+                            }
+                          </div>
+                        )}
                       </div>
                       <div className="md:col-span-3">
                         <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-tighter">

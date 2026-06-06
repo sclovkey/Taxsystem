@@ -321,9 +321,14 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                   <p className="text-[10px] text-slate-400 mt-1">* Digunakan sebagai harga jual default.</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <div className="flex items-end">
+                    <label className="block text-xs font-bold text-slate-400 uppercase">Jumlah {newItemForm.unit ? `(${newItemForm.unit})` : ''}</label>
+                  </div>
+                  <div className="flex items-end justify-end">
+                    <label className="block text-xs font-bold text-slate-400 uppercase text-right">Harga Beli Satuan (HPP)</label>
+                  </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Jumlah {newItemForm.unit ? `(${newItemForm.unit})` : ''}</label>
                     <input 
                       type="number" 
                       placeholder="0" 
@@ -334,7 +339,6 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2 text-right">Harga Beli Satuan (HPP)</label>
                     <input 
                       type="number" 
                       placeholder="0" 
@@ -435,9 +439,16 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     className="w-full bg-slate-50 border border-slate-100 p-3 rounded-xl outline-none focus:ring-2 focus:ring-brand-blue/10" 
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <div className="flex items-end">
+                    <label className="block text-xs font-bold text-slate-400 uppercase">Jumlah</label>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="block text-xs font-bold text-slate-400 uppercase">
+                      {editingStockData.type === 'IN' ? 'Harga Beli Satuan (HPP)' : 'Harga Jual Satuan'}
+                    </label>
+                  </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Jumlah</label>
                     <input 
                       type="number" 
                       required
@@ -447,9 +458,6 @@ export default function Inventory({ items, batches, stockOuts, transactions, onA
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-                      {editingStockData.type === 'IN' ? 'Harga Beli Satuan (HPP)' : 'Harga Jual Satuan'}
-                    </label>
                     <input 
                       type="number" 
                       required

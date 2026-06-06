@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Wallet, Calendar } from 'lucide-react';
-import { Transaction } from '../types';
+import { Transaction, StockOut } from '../types';
 
 interface ReportsProps {
   transactions: Transaction[];
+  stockOuts: StockOut[];
 }
 
-export default function Reports({ transactions }: ReportsProps) {
+export default function Reports({ transactions, stockOuts }: ReportsProps) {
   const months = Array.from(new Set(transactions.map(t => t.date.slice(0, 7)))).sort().reverse();
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     return months[0] || new Date().toISOString().slice(0, 7);
@@ -18,9 +19,17 @@ export default function Reports({ transactions }: ReportsProps) {
   const incomeTransactions = filteredTransactions.filter(t => t.type === 'Income' || t.category === 'Penjualan');
   const incomeTotal = incomeTransactions.reduce((acc, t) => acc + t.amount, 0);
 
-  // HPP (Cost of Goods Sold) - usually 'Pembelian' in this context
-  const hppTransactions = filteredTransactions.filter(t => t.category === 'Pembelian');
-  const hppTotal = hppTransactions.reduce((acc, t) => acc + t.amount, 0);
+  // HPP (Cost of Goods Sold)
+  const hppTotal = filteredTransactions.reduce((acc, t) => {
+    if (t.relatedType === 'stockOut' && t.relatedId) {
+      const sOut = stockOuts.find(so => so.id === t.relatedId);
+      return acc + (sOut ? sOut.cogs : 0);
+    }
+    if (t.category === 'Pembelian' && t.relatedType !== 'stockBatch') {
+      return acc + t.amount;
+    }
+    return acc;
+  }, 0);
 
   // Operating Expenses
   const otherExpenses = filteredTransactions.filter(t => t.category === 'Beban');

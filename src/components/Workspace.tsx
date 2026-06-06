@@ -1,20 +1,28 @@
 import React from 'react';
 import { TrendingUp, Package, CreditCard, ArrowRight, Zap, BarChart3, Truck, Calculator } from 'lucide-react';
-import { Transaction } from '../types';
+import { Transaction, StockOut } from '../types';
 
 interface DashboardProps {
   transactions: Transaction[];
   setActiveTab: (tab: string) => void;
+  stockOuts: StockOut[];
 }
 
-export default function Workspace({ transactions, setActiveTab }: DashboardProps) {
+export default function Workspace({ transactions, setActiveTab, stockOuts }: DashboardProps) {
   const income = transactions
     .filter(t => t.type === 'Income' || t.category === 'Penjualan')
     .reduce((acc, t) => acc + t.amount, 0);
     
-  const hpp = transactions
-    .filter(t => t.category === 'Pembelian')
-    .reduce((acc, t) => acc + t.amount, 0);
+  const hpp = transactions.reduce((acc, t) => {
+    if (t.relatedType === 'stockOut' && t.relatedId) {
+      const sOut = stockOuts.find(so => so.id === t.relatedId);
+      return acc + (sOut ? sOut.cogs : 0);
+    }
+    if (t.category === 'Pembelian' && t.relatedType !== 'stockBatch') {
+      return acc + t.amount;
+    }
+    return acc;
+  }, 0);
     
   const operatingExpenses = transactions
     .filter(t => t.category === 'Beban')

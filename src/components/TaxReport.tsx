@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { FileText, Calculator, TrendingUp, Info, Calendar } from 'lucide-react';
-import { Transaction } from '../types';
+import { Transaction, StockOut } from '../types';
 
 interface TaxReportProps {
   transactions: Transaction[];
+  stockOuts: StockOut[];
 }
 
-export default function TaxReport({ transactions }: TaxReportProps) {
+export default function TaxReport({ transactions, stockOuts }: TaxReportProps) {
   const months = Array.from(new Set(transactions.map(t => t.date.slice(0, 7)))).sort().reverse();
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     return months[0] || new Date().toISOString().slice(0, 7);
@@ -20,9 +21,16 @@ export default function TaxReport({ transactions }: TaxReportProps) {
     .reduce((acc, t) => acc + t.amount, 0);
 
   // HPP (Cost of Goods Sold)
-  const hppTotal = filteredTransactions
-    .filter(t => t.category === 'Pembelian')
-    .reduce((acc, t) => acc + t.amount, 0);
+  const hppTotal = filteredTransactions.reduce((acc, t) => {
+    if (t.relatedType === 'stockOut' && t.relatedId) {
+      const sOut = stockOuts.find(so => so.id === t.relatedId);
+      return acc + (sOut ? sOut.cogs : 0);
+    }
+    if (t.category === 'Pembelian' && t.relatedType !== 'stockBatch') {
+      return acc + t.amount;
+    }
+    return acc;
+  }, 0);
 
   // Operating Expenses
   const otherExpensesTotal = filteredTransactions

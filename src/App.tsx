@@ -159,8 +159,26 @@ export default function App() {
     return stockOutId;
   };
 
-  const currentProfit = transactions.filter(t => t.type === 'Income').reduce((acc, t) => acc + t.amount, 0)
-                        - transactions.filter(t => t.type === 'Expense').reduce((acc, t) => acc + t.amount, 0);
+  const totalIncome = transactions
+    .filter(t => t.type === 'Income' || t.category === 'Penjualan')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const totalHPP = transactions.reduce((acc, t) => {
+    if (t.relatedType === 'stockOut' && t.relatedId) {
+      const sOut = stockOuts.find(so => so.id === t.relatedId);
+      return acc + (sOut ? sOut.cogs : 0);
+    }
+    if (t.category === 'Pembelian' && t.relatedType !== 'stockBatch') {
+      return acc + t.amount;
+    }
+    return acc;
+  }, 0);
+
+  const totalBeban = transactions
+    .filter(t => t.category === 'Beban')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const currentProfit = totalIncome - totalHPP - totalBeban;
 
   const addTransaction = (t: Transaction) => upsert('transactions', t.id, t);
   const updateTransaction = (t: Transaction) => upsert('transactions', t.id, t);
@@ -395,7 +413,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Workspace transactions={transactions} setActiveTab={setActiveTab} />;
+        return <Workspace transactions={transactions} setActiveTab={setActiveTab} stockOuts={stockOuts} />;
       case 'transactions':
         return <Transactions 
           transactions={transactions} 
@@ -445,7 +463,7 @@ export default function App() {
       case 'suppliers':
         return <Suppliers suppliers={suppliers} addSupplier={addSupplier} deleteSupplier={deleteSupplier} />;
       case 'reports':
-        return <Reports transactions={transactions} />;
+        return <Reports transactions={transactions} stockOuts={stockOuts} />;
       case 'balance-sheet':
         return <BalanceSheet 
           transactions={transactions} 
@@ -463,9 +481,9 @@ export default function App() {
           currentProfit={currentProfit} 
         />;
       case 'tax':
-        return <TaxReport transactions={transactions} />;
+        return <TaxReport transactions={transactions} stockOuts={stockOuts} />;
       default:
-        return <Workspace transactions={transactions} setActiveTab={setActiveTab} />;
+        return <Workspace transactions={transactions} setActiveTab={setActiveTab} stockOuts={stockOuts} />;
     }
   };
 
