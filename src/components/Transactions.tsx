@@ -645,7 +645,7 @@ export default function Transactions({
               <select 
                 value={formData.type}
                 onChange={e => {
-                  const newType = e.target.value as 'Income' | 'Expense';
+                  const newType = e.target.value as any;
                   const currentAutoDesc = generateDescription(selectedItems, formData.type);
                   const isAutoDesc = !formData.description || formData.description === currentAutoDesc;
                   
@@ -653,24 +653,16 @@ export default function Transactions({
                   setSelectedItems(updatedItems);
                   calculateTotalFromItems(updatedItems);
                   
-                  let targetCategory = formData.category;
-                  if (newType === 'Income' && (formData.category === 'Beban' || formData.category === 'Pembelian' || formData.category === 'Aset')) {
-                    targetCategory = 'Penjualan';
-                  } else if (newType === 'Expense' && formData.category === 'Penjualan') {
-                    targetCategory = 'Beban';
-                  }
-
                   setFormData(prev => ({
                     ...prev, 
                     type: newType,
-                    category: targetCategory,
                     description: isAutoDesc ? generateDescription(updatedItems, newType) : prev.description
                   }));
                 }}
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
               >
-                <option value="Income" disabled={formData.category === 'Beban' || formData.category === 'Pembelian' || formData.category === 'Aset'}>Pemasukan</option>
-                <option value="Expense" disabled={formData.category === 'Penjualan'}>Pengeluaran</option>
+                <option value="Income">Pemasukan</option>
+                <option value="Expense">Pengeluaran</option>
               </select>
             </div>
             <div>
@@ -685,8 +677,6 @@ export default function Transactions({
                   let targetType = formData.type;
                   if (val === 'Penjualan') targetType = 'Income';
                   if (val === 'Pembelian') targetType = 'Expense';
-                  if (val === 'Beban') targetType = 'Expense';
-                  if (val === 'Aset') targetType = 'Expense';
 
                   if (targetType !== formData.type) {
                     const updatedItems = refreshPrices(targetType, selectedItems);
@@ -706,10 +696,10 @@ export default function Transactions({
                 }}
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-brand-blue/10 outline-none"
               >
-                <option value="Beban" disabled={formData.type === 'Income'}>Beban Operasional</option>
-                <option value="Penjualan" disabled={formData.type === 'Expense'}>Penjualan (Dagang)</option>
-                <option value="Pembelian" disabled={formData.type === 'Expense'}>Pembelian (Stok)</option>
-                <option value="Aset" disabled={formData.type === 'Income'}>Aset Tetap</option>
+                <option value="Beban">Beban Operasional</option>
+                <option value="Penjualan">Penjualan (Dagang)</option>
+                <option value="Pembelian">Pembelian (Stok)</option>
+                <option value="Aset">Aset Tetap</option>
                 <option value="Lainnya">Lain-lain</option>
               </select>
             </div>

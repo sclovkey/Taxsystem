@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { loginWithEmail } from '../lib/firebase';
-import { LogIn, Landmark, AlertCircle, Loader2, User, Lock } from 'lucide-react';
+import { LogIn, Landmark, AlertCircle, Loader2, User, Lock, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function Login() {
@@ -9,6 +9,17 @@ export default function Login() {
   
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+
+  const startDemoMode = () => {
+    const demoUser = {
+      uid: 'demo_user_finance',
+      email: 'demo@finance.umkm',
+      displayName: 'Demo User',
+      emailVerified: true
+    };
+    localStorage.setItem('demo_user_finance', JSON.stringify(demoUser));
+    window.location.reload();
+  };
 
   const handleTraditionalLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +45,8 @@ export default function Login() {
       setError('Username atau password salah.');
     } else if (err.code === 'auth/operation-not-allowed') {
       setError('Metode login Email/Password belum diaktifkan di Firebase Console.');
+    } else if (err.code === 'auth/network-request-failed' || err.message?.includes('network-request-failed') || err.message?.includes('network error')) {
+      setError('network-request-failed');
     } else {
       setError('Gagal masuk. Cek koneksi atau konfigurasi Firebase.');
     }
@@ -62,10 +75,35 @@ export default function Login() {
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-left"
+                className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex flex-col gap-3 text-left"
               >
-                <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
-                <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
+                  {error === 'network-request-failed' ? (
+                    <div className="flex-1">
+                      <h4 className="text-xs font-bold text-red-800 mb-1">Gagal Terhubung ke Firebase (Network Error)</h4>
+                      <p className="text-[11px] text-red-600 font-medium leading-relaxed mb-3">
+                        Koneksi ke Firebase diblokir oleh browser atau ekstensi Anda. Hal ini biasanya disebabkan oleh **Adblocker (seperti uBlock Origin, AdBlock)** atau kebijakan privasi ketat browser **(Brave Shields / Safari Tracking Protection)** dalam mode iframe.
+                      </p>
+                      <div className="space-y-1 text-[10px] text-slate-700 bg-white/80 p-3 rounded-lg border border-red-100/50 mb-3 leading-normal">
+                        <p className="font-semibold text-slate-800 mb-0.5">Solusi yang dapat Anda lakukan:</p>
+                        <p>1. Klik tombol <strong className="text-indigo-600">"Open in New Tab"</strong> di pojok kanan atas aplikasi untuk membukanya secara penuh mandiri (Sangat Direkomendasikan).</p>
+                        <p>2. Matikan sementara Adblocker atau Brave Shields pada halaman ini.</p>
+                        <p>3. Gunakan tombol masuk mode Demo (Offline) di bawah ini untuk mencoba aplikasi secara instan.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={startDemoMode}
+                        className="w-full py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
+                      >
+                        <Zap size={14} className="fill-current text-white" />
+                        Masuk dengan Mode Demo (Offline)
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -110,6 +148,21 @@ export default function Login() {
                   Masuk Sekarang
                 </>
               )}
+            </button>
+            
+            <div className="flex items-center my-4 justify-between">
+              <span className="w-full border-b border-slate-100"></span>
+              <span className="text-[11px] uppercase tracking-wider font-bold text-slate-400 px-3 shrink-0">atau</span>
+              <span className="w-full border-b border-slate-100"></span>
+            </div>
+
+            <button
+              type="button"
+              onClick={startDemoMode}
+              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-amber-50 border border-amber-200 text-amber-800 font-bold rounded-xl hover:bg-amber-100/70 transition-all active:scale-[0.98]"
+            >
+              <Zap size={18} className="fill-amber-800" />
+              Gunakan Mode Demo (Offline)
             </button>
           </form>
 

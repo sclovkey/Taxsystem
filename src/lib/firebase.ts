@@ -22,7 +22,10 @@ export const loginWithEmail = (username: string, pass: string) => {
   return signInWithEmailAndPassword(auth, email, pass);
 };
 
-export const logout = () => signOut(auth);
+export const logout = () => {
+  localStorage.removeItem('demo_user_finance');
+  return signOut(auth);
+};
 
 async function testConnection() {
   try {

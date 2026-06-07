@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Calculator, Edit2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Plus, Trash2, Calculator } from 'lucide-react';
 import { Asset } from '../types';
 
 interface AssetsProps {
   assets: Asset[];
   addAsset: (a: Asset) => void;
-  updateAsset?: (a: Asset) => void;
   deleteAsset?: (id: string) => void;
 }
 
-export default function Assets({ assets, addAsset, updateAsset, deleteAsset }: AssetsProps) {
+export default function Assets({ assets, addAsset, deleteAsset }: AssetsProps) {
   const [isAdding, setIsAdding] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     cost: '',
@@ -41,16 +38,6 @@ export default function Assets({ assets, addAsset, updateAsset, deleteAsset }: A
       salvageValue: '0',
       purchaseDate: new Date().toISOString().split('T')[0]
     });
-  };
-
-  const handleEditSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingAsset || !editingAsset.name || !editingAsset.cost) return;
-
-    if (updateAsset) {
-      updateAsset(editingAsset);
-    }
-    setEditingAsset(null);
   };
 
   const calculateDepreciation = (asset: Asset) => {
@@ -144,6 +131,15 @@ export default function Assets({ assets, addAsset, updateAsset, deleteAsset }: A
                 className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
               />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tanggal Beli</label>
+              <input 
+                type="date"
+                value={formData.purchaseDate}
+                onChange={e => setFormData({...formData, purchaseDate: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none"
+              />
+            </div>
             <div className="flex items-end">
               <button type="submit" className="w-full bg-slate-900 text-white rounded-lg py-2 text-sm font-bold">Simpan Aset</button>
             </div>
@@ -184,24 +180,13 @@ export default function Assets({ assets, addAsset, updateAsset, deleteAsset }: A
                   </div>
                 </div>
 
-                <div className="flex gap-2 self-start lg:self-center">
-                  <button 
-                    onClick={() => setEditingAsset(asset)}
-                    type="button"
-                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50 rounded-lg transition-all"
-                    title="Edit Aktiva Tetap"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button 
-                    onClick={() => deleteAsset && deleteAsset(asset.id)}
-                    type="button"
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50/50 rounded-lg transition-all"
-                    title="Hapus Aktiva Tetap"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+                <button 
+                  onClick={() => deleteAsset && deleteAsset(asset.id)}
+                  type="button"
+                  className="p-2 text-slate-300 hover:text-red-500 transition-colors self-start lg:self-center"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
               <div className="h-1 bg-slate-50 w-full">
                 <div 
@@ -220,89 +205,6 @@ export default function Assets({ assets, addAsset, updateAsset, deleteAsset }: A
           </div>
         )}
       </div>
-
-      <AnimatePresence>
-        {editingAsset && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-800">Edit Aktiva Tetap</h3>
-                <button 
-                  onClick={() => setEditingAsset(null)}
-                  className="text-slate-400 hover:text-slate-650 font-bold"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nama Aset</label>
-                  <input 
-                    type="text"
-                    required
-                    value={editingAsset.name}
-                    onChange={e => setEditingAsset({...editingAsset, name: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none animate-none"
-                    placeholder="Contoh: Mesin Kopi, Motor Delivery"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Harga Perolehan (Rp)</label>
-                  <input 
-                    type="number"
-                    disabled
-                    value={editingAsset.cost}
-                    className="w-full bg-slate-100 border border-slate-200 text-slate-400 rounded-lg px-4 py-2 text-sm cursor-not-allowed outline-none animate-none"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-1 block">*Harga Perolehan disinkronkan otomatis dari transaksi</span>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Umur Ekonomis (Tahun)</label>
-                  <input 
-                    type="number"
-                    required
-                    value={editingAsset.usefulLifePoints}
-                    onChange={e => setEditingAsset({...editingAsset, usefulLifePoints: parseFloat(e.target.value) || 0})}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none animate-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nilai Residu (Rp)</label>
-                  <input 
-                    type="number"
-                    required
-                    value={editingAsset.salvageValue}
-                    onChange={e => setEditingAsset({...editingAsset, salvageValue: parseFloat(e.target.value) || 0})}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none animate-none"
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button 
-                    type="button" 
-                    onClick={() => setEditingAsset(null)}
-                    className="flex-1 bg-slate-100 text-slate-600 rounded-lg py-2 text-sm font-bold hover:bg-slate-200 transition-colors"
-                  >
-                    Batal
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="flex-1 bg-indigo-600 text-white rounded-lg py-2 text-sm font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
-                  >
-                    Simpan
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

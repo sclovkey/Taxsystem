@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { 
   collection, 
   onSnapshot, 
@@ -27,6 +27,19 @@ export function useFirebaseSync(user: User | null) {
   const [monthlyOpeningBalances, setMonthlyOpeningBalances] = useState<MonthlyOpeningBalance[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const stateSetters: Record<string, Dispatch<SetStateAction<any[]>>> = {
+    transactions: setTransactions as any,
+    inventoryItems: setInventoryItems as any,
+    stockBatches: setStockBatches as any,
+    stockOuts: setStockOuts as any,
+    assets: setAssets as any,
+    suppliers: setSuppliers as any,
+    customers: setCustomers as any,
+    liabilities: setLiabilities as any,
+    equityRecords: setEquityRecords as any,
+    monthlyOpeningBalances: setMonthlyOpeningBalances as any,
+  };
+
   useEffect(() => {
     if (!user) {
       setTransactions([]);
@@ -54,6 +67,45 @@ export function useFirebaseSync(user: User | null) {
         setLoading(false);
       }
     };
+
+    if (user.uid.startsWith('demo_')) {
+      const loadDemoCollection = (name: string, setter: (data: any[]) => void, orderField: string = 'date') => {
+        const localKey = `demo_finance_${name}`;
+        const savedData = localStorage.getItem(localKey);
+        let items = savedData ? JSON.parse(savedData) : [];
+        
+        items.sort((a: any, b: any) => {
+          const valA = a[orderField];
+          const valB = b[orderField];
+          
+          if (orderField === 'date' || orderField.toLowerCase().includes('date') || orderField === 'updatedAt') {
+            return new Date(valB).getTime() - new Date(valA).getTime();
+          }
+          
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            return valA.localeCompare(valB);
+          }
+          
+          return 0;
+        });
+
+        setter(items);
+        checkLoaded();
+      };
+
+      loadDemoCollection('transactions', setTransactions);
+      loadDemoCollection('inventoryItems', setInventoryItems, 'name');
+      loadDemoCollection('stockBatches', setStockBatches);
+      loadDemoCollection('stockOuts', setStockOuts);
+      loadDemoCollection('assets', setAssets, 'purchaseDate');
+      loadDemoCollection('suppliers', setSuppliers, 'name');
+      loadDemoCollection('customers', setCustomers, 'name');
+      loadDemoCollection('liabilities', setLiabilities);
+      loadDemoCollection('equityRecords', setEquityRecords);
+      loadDemoCollection('monthlyOpeningBalances', setMonthlyOpeningBalances, 'month');
+
+      return;
+    }
 
     const syncCollection = (name: string, setter: (data: any[]) => void, orderField: string = 'date') => {
       const path = `users/${userId}/${name}`;
@@ -102,6 +154,57 @@ export function useFirebaseSync(user: User | null) {
   const upsert = async (collName: string, id: string, data: any) => {
     if (!user) return;
     const path = `users/${user.uid}/${collName}`;
+
+    if (user.uid.startsWith('demo_')) {
+      const localKey = `demo_finance_${collName}`;
+      const savedData = localStorage.getItem(localKey);
+      let items = savedData ? JSON.parse(savedData) : [];
+      
+      const index = items.findIndex((item: any) => item.id === id);
+      const updatedData = { ...data, userId: user.uid };
+      if (index >= 0) {
+        items[index] = updatedData;
+      } else {
+        items.push(updatedData);
+      }
+      localStorage.setItem(localKey, JSON.stringify(items));
+      
+      const orderFields: Record<string, string> = {
+        transactions: 'date',
+        inventoryItems: 'name',
+        stockBatches: 'date',
+        stockOuts: 'date',
+        assets: 'purchaseDate',
+        suppliers: 'name',
+        customers: 'name',
+        liabilities: 'date',
+        equityRecords: 'date',
+        monthlyOpeningBalances: 'month',
+      };
+      
+      const orderField = orderFields[collName] || 'date';
+      items.sort((a: any, b: any) => {
+        const valA = a[orderField];
+        const valB = b[orderField];
+        
+        if (orderField === 'date' || orderField.toLowerCase().includes('date') || orderField === 'updatedAt') {
+          return new Date(valB).getTime() - new Date(valA).getTime();
+        }
+        
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return valA.localeCompare(valB);
+        }
+        
+        return 0;
+      });
+
+      const setter = stateSetters[collName];
+      if (setter) {
+        setter([...items]);
+      }
+      return;
+    }
+
     try {
       await setDoc(doc(db, path, id), { ...data, userId: user.uid });
     } catch (e) {
@@ -112,6 +215,22 @@ export function useFirebaseSync(user: User | null) {
   const remove = async (collName: string, id: string) => {
     if (!user) return;
     const path = `users/${user.uid}/${collName}`;
+
+    if (user.uid.startsWith('demo_')) {
+      const localKey = `demo_finance_${collName}`;
+      const savedData = localStorage.getItem(localKey);
+      let items = savedData ? JSON.parse(savedData) : [];
+      
+      items = items.filter((item: any) => item.id !== id);
+      localStorage.setItem(localKey, JSON.stringify(items));
+      
+      const setter = stateSetters[collName];
+      if (setter) {
+        setter(items);
+      }
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, path, id));
     } catch (e) {

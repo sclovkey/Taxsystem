@@ -17,7 +17,7 @@ export default function TaxReport({ transactions, stockOuts }: TaxReportProps) {
   
   // Income (Revenue)
   const incomeTotal = filteredTransactions
-    .filter(t => (t.type === 'Income' && t.category !== 'Beban' && t.category !== 'Pembelian' && t.category !== 'Aset') || t.category === 'Penjualan')
+    .filter(t => t.type === 'Income' || t.category === 'Penjualan')
     .reduce((acc, t) => acc + t.amount, 0);
 
   // HPP (Cost of Goods Sold)

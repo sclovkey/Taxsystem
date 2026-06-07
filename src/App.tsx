@@ -18,7 +18,7 @@ import Suppliers from './components/Suppliers';
 import Cash from './components/Cash';
 import Login from './components/Login';
 import { AnimatePresence, motion } from 'motion/react';
-import { Menu, X, Loader2 } from 'lucide-react';
+import { Menu, X, Loader2, Zap } from 'lucide-react';
 import { Transaction, Asset, EquityRecord, InventoryItem, StockBatch, StockOut, Supplier, Customer, Liability } from './types';
 import { auth } from './lib/firebase';
 import { useFirebaseSync } from './lib/useFirebaseSync';
@@ -55,6 +55,13 @@ export default function App() {
   } = useFirebaseSync(user);
 
   useEffect(() => {
+    const savedDemoUser = localStorage.getItem('demo_user_finance');
+    if (savedDemoUser) {
+      setUser(JSON.parse(savedDemoUser));
+      setAuthLoading(false);
+      return;
+    }
+
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setAuthLoading(false);
@@ -160,7 +167,7 @@ export default function App() {
   };
 
   const totalIncome = transactions
-    .filter(t => (t.type === 'Income' && t.category !== 'Beban' && t.category !== 'Pembelian' && t.category !== 'Aset') || t.category === 'Penjualan')
+    .filter(t => t.type === 'Income' || t.category === 'Penjualan')
     .reduce((acc, t) => acc + t.amount, 0);
 
   const totalHPP = transactions.reduce((acc, t) => {
@@ -276,7 +283,6 @@ export default function App() {
   };
   
   const addAsset = (a: Asset) => upsert('assets', a.id, a);
-  const updateAsset = (a: Asset) => upsert('assets', a.id, a);
   const deleteAsset = (id: string) => {
     if (typeof window !== 'undefined' && !window.confirm("Hapus data aset/aktiva tetap ini?")) return;
     const linkedTx = transactions.find(t => t.relatedId === id && t.relatedType === 'asset');
@@ -516,7 +522,7 @@ export default function App() {
           updateStockEntry={updateStockEntry}
         />;
       case 'assets':
-        return <Assets assets={assets} addAsset={addAsset} updateAsset={updateAsset} deleteAsset={deleteAsset} />;
+        return <Assets assets={assets} addAsset={addAsset} deleteAsset={deleteAsset} />;
       case 'liabilities':
         return <Liabilities 
           liabilities={liabilities} 
@@ -565,7 +571,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-coffee-bg text-slate-900 overflow-hidden font-sans relative">
+    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans relative">
       {/* Menu Button - Visible when sidebar is closed */}
       <motion.button 
         initial={false}
@@ -578,7 +584,7 @@ export default function App() {
       >
         <Menu size={24} className="group-hover:scale-110 transition-transform" />
       </motion.button>
- 
+
       {/* Sidebar with mobile drawer support */}
       <Sidebar 
         activeTab={activeTab} 
@@ -596,9 +602,29 @@ export default function App() {
           marginLeft: (isDesktop && isSidebarOpen) ? 256 : 0,
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="flex-1 h-screen overflow-y-auto bg-coffee-bg/40 p-4 md:p-8 pt-16 lg:pt-8"
+        className="flex-1 h-screen overflow-y-auto bg-slate-50/50 p-4 md:p-8 pt-16 lg:pt-8"
       >
         <div className="max-w-6xl mx-auto h-full px-2 md:px-0">
+          {user?.uid?.startsWith('demo_') && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-amber-800 font-medium shadow-sm shadow-amber-100">
+              <div className="flex items-start gap-3">
+                <Zap size={18} className="fill-amber-500 text-amber-500 animate-pulse shrink-0 mt-0.5 md:mt-0" />
+                <div className="leading-relaxed">
+                  <strong className="text-amber-900 block md:inline font-bold">Mode Demo Aktif (Offline): </strong> 
+                  Data dicatat dan disimpan secara langsung di penyimpanan lokal browser Anda. Nonaktifkan Adblocker/Brave Shields untuk login dan mengaktifkan sinkronisasi database cloud Firebase.
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('demo_user_finance');
+                  window.location.reload();
+                }}
+                className="w-full md:w-auto px-4 py-2 hover:bg-amber-600 border border-amber-300 bg-amber-500 text-white rounded-xl transition-all font-bold text-[11px] uppercase tracking-wider text-center active:scale-[0.98]"
+              >
+                Keluar Mode Demo
+              </button>
+            </div>
+          )}
           {dataLoading ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <Loader2 className="animate-spin text-indigo-300" size={32} />

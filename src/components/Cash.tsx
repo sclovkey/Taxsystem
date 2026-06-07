@@ -32,11 +32,11 @@ export default function Cash({ transactions, monthlyOpeningBalances, onSaveOpeni
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const monthIncoming = transactions
-    .filter(t => t.date.startsWith(selectedMonth) && t.type === 'Income' && t.category !== 'Beban' && t.category !== 'Pembelian' && t.category !== 'Aset')
+    .filter(t => t.date.startsWith(selectedMonth) && t.type === 'Income')
     .reduce((acc, t) => acc + t.amount, 0);
 
   const monthOutgoing = transactions
-    .filter(t => t.date.startsWith(selectedMonth) && (t.type === 'Expense' || t.category === 'Beban' || t.category === 'Pembelian' || t.category === 'Aset'))
+    .filter(t => t.date.startsWith(selectedMonth) && t.type === 'Expense')
     .reduce((acc, t) => acc + t.amount, 0);
 
   const monthEndingBalance = currentOpeningBalance + monthIncoming - monthOutgoing;
