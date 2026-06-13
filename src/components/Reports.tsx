@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { BarChart3, TrendingUp, TrendingDown, Wallet, Calendar } from 'lucide-react';
-import { Transaction, StockOut } from '../types';
+import { BarChart3, TrendingUp, TrendingDown, Wallet, Calendar, Coffee, Building2 } from 'lucide-react';
+import { Transaction, StockOut, CompanyIdentity } from '../types';
 
 interface ReportsProps {
   transactions: Transaction[];
   stockOuts: StockOut[];
+  companyProfile?: CompanyIdentity[];
 }
 
-export default function Reports({ transactions, stockOuts }: ReportsProps) {
+export default function Reports({ transactions, stockOuts, companyProfile }: ReportsProps) {
+  const profile = companyProfile?.[0];
   const months = Array.from(new Set(transactions.map(t => t.date.slice(0, 7)))).sort().reverse();
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     return months[0] || new Date().toISOString().slice(0, 7);
@@ -76,6 +78,23 @@ export default function Reports({ transactions, stockOuts }: ReportsProps) {
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-8 space-y-8">
+          {profile && (
+            <div className="border-b border-dashed border-slate-200 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50/40 p-4 rounded-xl -mx-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Building2 className="text-indigo-600 shrink-0" size={18} />
+                  <h2 className="text-lg font-bold text-slate-800 tracking-tight">{profile.companyName}</h2>
+                </div>
+                {profile.slogan && <p className="text-slate-500 italic text-xs">"{profile.slogan}"</p>}
+                {profile.address && <p className="text-slate-400 text-xs mt-1">{profile.address}</p>}
+              </div>
+              <div className="text-left md:text-right text-[11px] text-slate-400 space-y-0.5 font-medium shrink-0">
+                {profile.ownerName && <p>Pemilik: <strong className="text-slate-600">{profile.ownerName}</strong></p>}
+                {profile.phone && <p>Telp/WA: <span className="text-slate-500">{profile.phone}</span></p>}
+                {profile.email && <p>E-Mail: <span className="text-slate-500">{profile.email}</span></p>}
+              </div>
+            </div>
+          )}
           {/* Revenue Section */}
           <section>
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Pendapatan Bersih</h2>

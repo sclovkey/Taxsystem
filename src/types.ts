@@ -91,3 +91,17 @@ export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
 }
+
+export interface CompanyIdentity {
+  id: string;
+  companyName: string;
+  ownerName: string;
+  businessType: string;
+  address: string;
+  phone: string;
+  email: string;
+  npwp: string;
+  slogan: string;
+  establishedDate: string;
+}
+

@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { db, handleFirestoreError, OperationType } from './firebase';
-import { Transaction, InventoryItem, StockBatch, StockOut, Asset, Supplier, Customer, Liability, EquityRecord, MonthlyOpeningBalance } from '../types';
+import { Transaction, InventoryItem, StockBatch, StockOut, Asset, Supplier, Customer, Liability, EquityRecord, MonthlyOpeningBalance, CompanyIdentity } from '../types';
 
 export function useFirebaseSync(user: User | null) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -25,6 +25,7 @@ export function useFirebaseSync(user: User | null) {
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
   const [equityRecords, setEquityRecords] = useState<EquityRecord[]>([]);
   const [monthlyOpeningBalances, setMonthlyOpeningBalances] = useState<MonthlyOpeningBalance[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<CompanyIdentity[]>([]);
   const [loading, setLoading] = useState(true);
 
   const stateSetters: Record<string, Dispatch<SetStateAction<any[]>>> = {
@@ -38,6 +39,7 @@ export function useFirebaseSync(user: User | null) {
     liabilities: setLiabilities as any,
     equityRecords: setEquityRecords as any,
     monthlyOpeningBalances: setMonthlyOpeningBalances as any,
+    companyProfile: setCompanyProfile as any,
   };
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export function useFirebaseSync(user: User | null) {
     const unsubscritbers: (() => void)[] = [];
 
     let loadedCounts = 0;
-    const TOTAL_COLLECTIONS = 10;
+    const TOTAL_COLLECTIONS = 11;
     const checkLoaded = () => {
       loadedCounts++;
       if (loadedCounts >= TOTAL_COLLECTIONS) {
@@ -103,6 +105,7 @@ export function useFirebaseSync(user: User | null) {
       loadDemoCollection('liabilities', setLiabilities);
       loadDemoCollection('equityRecords', setEquityRecords);
       loadDemoCollection('monthlyOpeningBalances', setMonthlyOpeningBalances, 'month');
+      loadDemoCollection('companyProfile', setCompanyProfile, 'companyName');
 
       return;
     }
@@ -147,6 +150,7 @@ export function useFirebaseSync(user: User | null) {
     syncCollection('liabilities', setLiabilities);
     syncCollection('equityRecords', setEquityRecords);
     syncCollection('monthlyOpeningBalances', setMonthlyOpeningBalances, 'month');
+    syncCollection('companyProfile', setCompanyProfile, 'companyName');
 
     return () => unsubscritbers.forEach(unsub => unsub());
   }, [user]);
@@ -180,6 +184,7 @@ export function useFirebaseSync(user: User | null) {
         liabilities: 'date',
         equityRecords: 'date',
         monthlyOpeningBalances: 'month',
+        companyProfile: 'companyName',
       };
       
       const orderField = orderFields[collName] || 'date';
@@ -249,6 +254,7 @@ export function useFirebaseSync(user: User | null) {
     liabilities,
     equityRecords,
     monthlyOpeningBalances,
+    companyProfile,
     loading,
     upsert,
     remove,

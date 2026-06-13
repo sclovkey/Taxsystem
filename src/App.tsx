@@ -17,6 +17,7 @@ import Liabilities from './components/Liabilities';
 import Suppliers from './components/Suppliers';
 import Cash from './components/Cash';
 import Login from './components/Login';
+import Settings from './components/Settings';
 import { AnimatePresence, motion } from 'motion/react';
 import { Menu, X, Loader2, Zap } from 'lucide-react';
 import { Transaction, Asset, EquityRecord, InventoryItem, StockBatch, StockOut, Supplier, Customer, Liability } from './types';
@@ -49,6 +50,7 @@ export default function App() {
     liabilities,
     equityRecords,
     monthlyOpeningBalances,
+    companyProfile,
     loading: dataLoading,
     upsert,
     remove
@@ -534,7 +536,7 @@ export default function App() {
       case 'suppliers':
         return <Suppliers suppliers={suppliers} addSupplier={addSupplier} deleteSupplier={deleteSupplier} />;
       case 'reports':
-        return <Reports transactions={transactions} stockOuts={stockOuts} />;
+        return <Reports transactions={transactions} stockOuts={stockOuts} companyProfile={companyProfile} />;
       case 'balance-sheet':
         return <BalanceSheet 
           transactions={transactions} 
@@ -553,6 +555,8 @@ export default function App() {
         />;
       case 'tax':
         return <TaxReport transactions={transactions} stockOuts={stockOuts} />;
+      case 'settings':
+        return <Settings companyProfile={companyProfile} upsert={upsert} />;
       default:
         return <Workspace transactions={transactions} setActiveTab={setActiveTab} stockOuts={stockOuts} />;
     }
@@ -594,6 +598,7 @@ export default function App() {
         }} 
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
+        companyName={companyProfile?.[0]?.companyName}
       />
       
       <motion.main 

@@ -81,6 +81,12 @@ service cloud.firestore {
              data.userId == request.auth.uid;
     }
 
+    function isValidCompanyIdentity(data) {
+      return data.keys().hasAll(['id', 'companyName', 'ownerName', 'userId']) &&
+             data.companyName is string && data.ownerName is string &&
+             data.userId == request.auth.uid;
+    }
+
     match /users/{userId} {
       match /transactions/{id} {
         allow read: if isOwner(userId);
@@ -150,6 +156,12 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && isValidMonthlyOpeningBalance(incoming()) && isValidId(id);
         allow update: if isOwner(userId) && isValidMonthlyOpeningBalance(incoming());
+        allow delete: if isOwner(userId);
+      }
+      match /companyProfile/{id} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidCompanyIdentity(incoming()) && isValidId(id);
+        allow update: if isOwner(userId) && isValidCompanyIdentity(incoming());
         allow delete: if isOwner(userId);
       }
     }

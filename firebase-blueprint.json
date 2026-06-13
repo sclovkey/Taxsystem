@@ -142,6 +142,25 @@
         "userId": { "type": "string" }
       },
       "required": ["id", "month", "amount", "userId"]
+    },
+    "CompanyIdentity": {
+      "title": "Company Identity",
+      "description": "Profile info for the company or business store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyName": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "businessType": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "npwp": { "type": "string" },
+        "slogan": { "type": "string" },
+        "establishedDate": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "companyName", "ownerName", "userId"]
     }
   },
   "firestore": {
@@ -184,6 +203,10 @@
     "users/{userId}/monthlyOpeningBalances/{balanceId}": {
       "schema": "MonthlyOpeningBalance",
       "description": "User monthly opening balances"
+    },
+    "users/{userId}/companyProfile/{profileId}": {
+      "schema": "CompanyIdentity",
+      "description": "User company profile identity"
     }
   }
 }
